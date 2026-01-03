@@ -423,8 +423,11 @@ async def main():
     dp.message.register(process_contact, OrderFlow.contact)
     dp.message.register(process_finish, OrderFlow.address) # Принимает и текст, и локацию
     
+    # УДАЛЯЕМ WEBHOOK ПЕРЕД POLLLING (Чтобы избежать конфликта getUpdates)
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    
+    # Запускаем polling, игнорируя старые апдейты
+    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":
     asyncio.run(main())
