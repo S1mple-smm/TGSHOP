@@ -19,7 +19,7 @@ load_dotenv()
 # --- 1. НАСТРОЙКИ ---
 class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
-    ADMIN_ID = os.getenv("ADMIN_ID")
+    ADMIN_ID = os.getenv("ADMIN_ID") # Ваш ID администратора
     DATABASE_URL = os.getenv("DATABASE_URL")
     PORT = int(os.getenv("PORT", 8000))
     BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
@@ -49,11 +49,10 @@ class DBManager:
         conn = self.get_conn()
         cur = conn.cursor()
         
-        # Типы данных
         id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
         json_type = "JSONB" if self.is_pg else "TEXT"
 
-        # Таблица ТОВАРОВ (обновленная структура)
+        # Таблица ТОВАРОВ
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
@@ -61,10 +60,10 @@ class DBManager:
                 price REAL,
                 description TEXT,
                 category TEXT,
-                images {json_type}, -- Массив ссылок/base64
-                sizes {json_type},   -- Доступность размеров
+                images {json_type},
+                sizes {json_type},
                 is_available INTEGER DEFAULT 1,
-                size_chart TEXT      -- Ссылка или текст размерной сетки
+                size_chart TEXT
             )
         """)
         
@@ -84,7 +83,7 @@ class DBManager:
         conn.commit()
         conn.close()
 
-    # --- API МЕТОДЫ ---
+    # --- API МЕТОДЫ (Для сайта) ---
     def get_products(self):
         conn = self.get_conn()
         cur = conn.cursor()
@@ -92,7 +91,6 @@ class DBManager:
         rows = cur.fetchall()
         res = []
         for r in rows:
-            # Десериализация JSON
             images = r['images']
             sizes = r['sizes']
             if isinstance(images, str): images = json.loads(images)
@@ -120,7 +118,6 @@ class DBManager:
         images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
-        # Upsert (Вставка или Обновление)
         if self.is_pg:
             sql = f"""
                 INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart)
@@ -161,19 +158,13 @@ class DBManager:
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        
-        # 1. Получаем текущие размеры
         cur.execute(f"SELECT sizes FROM products WHERE id={ph}", (pid,))
         row = cur.fetchone()
         if row:
             current_sizes = row[0]
             if isinstance(current_sizes, str): current_sizes = json.loads(current_sizes)
             elif hasattr(current_sizes, 'copy'): current_sizes = current_sizes.copy()
-            
-            # 2. Обновляем
             current_sizes[size] = status
-            
-            # 3. Сохраняем обратно
             new_json = json.dumps(current_sizes)
             cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
             conn.commit()
@@ -197,6 +188,18 @@ class DBManager:
         conn.commit()
         conn.close()
         return oid
+    
+    def list_user_orders(self, uid, limit=5):
+        conn = self.get_conn()
+        cur = conn.cursor()
+        ph = "%s" if self.is_pg else "?"
+        cur.execute(f"SELECT * FROM orders WHERE user_id={ph} ORDER BY id DESC LIMIT {limit}", (uid,))
+        rows = cur.fetchall()
+        orders = []
+        for r in rows:
+            orders.append({"id": r['id'], "total": r['total'], "created_at": r['created_at']})
+        conn.close()
+        return orders
 
 db = DBManager()
 
@@ -238,6 +241,7 @@ async def serve_index(request):
 # --- 4. ТЕЛЕГРАМ БОТ ---
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
@@ -247,13 +251,54 @@ class OrderFlow(StatesGroup):
     contact = State()
     address = State()
 
-async def cmd_start(m: Message):
-    kb = ReplyKeyboardMarkup(
+# Клавиатуры
+def main_kb():
+    return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
-        resize_keyboard=True
+        resize_keyboard=True,
+        input_field_placeholder="Нажмите кнопку ниже 👇"
     )
-    await m.answer(f"👋 Привет, {m.from_user.first_name}!\nДобро пожаловать в KOS Sport. Нажмите кнопку ниже, чтобы открыть каталог.", reply_markup=kb)
 
+def contact_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Отправить мой номер", request_contact=True)]],
+        resize_keyboard=True, one_time_keyboard=True
+    )
+
+def location_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📍 Отправить геолокацию", request_location=True)],
+            [KeyboardButton(text="✍️ Ввести адрес вручную")]
+        ],
+        resize_keyboard=True, one_time_keyboard=True
+    )
+
+# Хендлеры
+async def cmd_start(m: Message):
+    await m.answer(
+        f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\n"
+        "Добро пожаловать в KOS Sport.\n"
+        "Здесь вы можете заказать лучшую экипировку.\n\n"
+        "👇 <b>Нажмите кнопку, чтобы открыть каталог:</b>", 
+        reply_markup=main_kb(),
+        parse_mode=ParseMode.HTML
+    )
+
+async def cmd_help(m: Message):
+    await m.answer("Доступные команды:\n/start - Перезапустить бота\n/orders - Мои заказы")
+
+async def cmd_orders(m: Message):
+    orders = db.list_user_orders(m.from_user.id)
+    if not orders:
+        await m.answer("📭 У вас пока нет заказов.")
+        return
+    text = "📂 <b>История заказов:</b>\n\n"
+    for o in orders:
+        text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 Сумма: {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
+    await m.answer(text, parse_mode=ParseMode.HTML)
+
+# Шаг 1: Прием данных из WebApp
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -263,55 +308,98 @@ async def on_webapp_data(m: Message, state: FSMContext):
         await state.update_data(items=items, total=total)
         await state.set_state(OrderFlow.contact)
         
-        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📱 Отправить телефон", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
-        
-        # Формируем чек
-        text = "📋 <b>Ваш заказ:</b>\n\n"
+        # Красивый чек предварительного просмотра
+        text = "🛍 <b>Ваша корзина:</b>\n\n"
         for i in items:
-            text += f"▪️ {i['name']} ({i['size']})\n   {i['qty']} x {i['price']:,.0f} UZS\n"
-        text += f"\n<b>Итого: {total:,.0f} UZS</b>"
-        text += "\n\n👇 Пожалуйста, отправьте ваш контакт для связи."
+            size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
+            text += f"▪️ {i['name']} {size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
         
-        await m.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML)
+        text += f"\n💳 <b>Итого к оплате: {total:,.0f} UZS</b>"
+        text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона для связи."
+        
+        await m.answer(text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
     except Exception as e:
         log.error(e)
-        await m.answer("Ошибка обработки данных. Попробуйте снова.")
+        await m.answer("❌ Ошибка получения данных. Попробуйте снова.")
 
+# Шаг 2: Контакт
 async def process_contact(m: Message, state: FSMContext):
     phone = m.contact.phone_number if m.contact else m.text
     await state.update_data(phone=phone, name=m.from_user.full_name)
     await state.set_state(OrderFlow.address)
-    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Локация", request_location=True), KeyboardButton(text="Пропустить")]], resize_keyboard=True, one_time_keyboard=True)
-    await m.answer("📍 Куда доставить заказ? (Отправьте локацию или напишите адрес текстом)", reply_markup=kb)
-
-async def process_finish(m: Message, state: FSMContext):
-    data = await state.get_data()
-    addr = f"Гео: {m.location.latitude},{m.location.longitude}" if m.location else m.text
     
-    # Сохраняем в БД
-    order_id = db.add_order(m.from_user.id, data['name'], data['phone'], addr, data['items'], data['total'])
-    
-    # Ответ пользователю
     await m.answer(
-        f"✅ <b>Заказ №{order_id} успешно оформлен!</b>\n\nСумма: {data['total']:,.0f} UZS\nМенеджер свяжется с вами по номеру: {data['phone']}", 
-        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]], resize_keyboard=True),
+        "📍 <b>Шаг 2/2:</b> Куда доставить заказ?\n\n"
+        "Нажмите кнопку <b>«Отправить геолокацию»</b> для точной доставки или напишите адрес текстом.", 
+        reply_markup=location_kb(),
         parse_mode=ParseMode.HTML
     )
+
+# Шаг 3: Локация и Финал
+async def process_finish(m: Message, state: FSMContext):
+    data = await state.get_data()
     
-    # Уведомление админу
+    # Обработка адреса
+    if m.location:
+        addr_text = "📍 Геолокация (см. карту у админа)"
+        lat = m.location.latitude
+        lon = m.location.longitude
+        maps_link = f"https://maps.google.com/?q={lat},{lon}"
+    else:
+        addr_text = f"🏠 {m.text}"
+        lat = None
+        lon = None
+        maps_link = None
+    
+    # Сохраняем в БД
+    order_id = db.add_order(m.from_user.id, data['name'], data['phone'], addr_text, data['items'], data['total'])
+    
+    # Ответ пользователю
+    receipt = (
+        f"✅ <b>Заказ №{order_id} успешно оформлен!</b>\n"
+        "──────────────────\n"
+        f"👤 <b>Заказчик:</b> {data['name']}\n"
+        f"📞 <b>Телефон:</b> {data['phone']}\n"
+        f"🚚 <b>Адрес:</b> {addr_text}\n"
+        "──────────────────\n"
+        f"💰 <b>ИТОГО: {data['total']:,.0f} UZS</b>\n\n"
+        "<i>Менеджер свяжется с вами в ближайшее время для подтверждения.</i>"
+    )
+    
+    await m.answer(receipt, reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+    
+    # Уведомление АДМИНУ
     if settings.ADMIN_ID:
-        txt = f"🆕 <b>Новый заказ №{order_id}</b>\n👤 {data['name']}\n📞 {data['phone']}\n📍 {addr}\n💰 <b>{data['total']:,.0f} UZS</b>\n\n📦 <b>Состав:</b>\n"
-        for i in data['items']:
-            txt += f"- {i['name']} ({i['size']}) x{i['qty']}\n"
+        try:
+            admin_msg = (
+                f"🆕 <b>НОВЫЙ ЗАКАЗ №{order_id}</b>\n"
+                f"👤 Клиент: <a href='tg://user?id={m.from_user.id}'>{data['name']}</a>\n"
+                f"📞 Телефон: <code>{data['phone']}</code>\n"
+                f"📍 Адрес: {addr_text}\n"
+                f"🔗 Карты: {maps_link if maps_link else 'Нет'}\n\n"
+                "📦 <b>Состав заказа:</b>\n"
+            )
             
-        try: await m.bot.send_message(settings.ADMIN_ID, txt, parse_mode=ParseMode.HTML)
-        except: pass
+            for i in data['items']:
+                size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
+                admin_msg += f"- {i['name']} {size_info} x{i['qty']}\n"
+            
+            admin_msg += f"\n💰 <b>Сумма: {data['total']:,.0f} UZS</b>"
+
+            await m.bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
+            
+            # Если была геолокация, отправляем админу точку на карте
+            if lat and lon:
+                await m.bot.send_location(settings.ADMIN_ID, latitude=lat, longitude=lon)
+                
+        except Exception as e:
+            log.error(f"Ошибка уведомления админа: {e}")
     
     await state.clear()
 
 async def main():
-    # WEB APP
-    app = web.Application(client_max_size=1024**2*10) # 10MB upload limit
+    # Запуск сервера
+    app = web.Application(client_max_size=1024**2*20) # Лимит 20MB на загрузку фото
     app.router.add_get("/", serve_index)
     app.router.add_get("/api/products", api_get_products)
     app.router.add_post("/api/products", api_save_product)
@@ -323,13 +411,17 @@ async def main():
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', settings.PORT).start()
     
-    # BOT
+    # Запуск бота
     bot = Bot(token=settings.BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
-    dp.message.register(cmd_start, F.text == "/start")
+    
+    # Хендлеры
+    dp.message.register(cmd_start, CommandStart())
+    dp.message.register(cmd_help, Command("help"))
+    dp.message.register(cmd_orders, Command("orders"))
     dp.message.register(on_webapp_data, F.web_app_data)
     dp.message.register(process_contact, OrderFlow.contact)
-    dp.message.register(process_finish, OrderFlow.address)
+    dp.message.register(process_finish, OrderFlow.address) # Принимает и текст, и локацию
     
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
