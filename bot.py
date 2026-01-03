@@ -7,7 +7,7 @@ import sqlite3
 from aiohttp import web
 from dotenv import load_dotenv
 
-# Попытка подключить драйвер PostgreSQL (для Render)
+# Подключение PostgreSQL (для Render/Neon)
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
@@ -21,7 +21,6 @@ class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     ADMIN_ID = os.getenv("ADMIN_ID")
     DATABASE_URL = os.getenv("DATABASE_URL")
-    # Render выдает порт автоматически, иначе 8000
     PORT = int(os.getenv("PORT", 8000))
     BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
 
@@ -34,7 +33,7 @@ class DBManager:
     def __init__(self):
         self.is_pg = bool(settings.DATABASE_URL and psycopg2)
         if self.is_pg:
-            log.info("✅ Используем PostgreSQL (Neon)")
+            log.info("✅ Используем PostgreSQL (Облако)")
         else:
             log.info("⚠️ Используем SQLite (Локально)")
         self.init_db()
@@ -50,21 +49,22 @@ class DBManager:
         conn = self.get_conn()
         cur = conn.cursor()
         
-        # Типы данных (JSONB для Postgres, TEXT для SQLite)
-        json_type = "JSONB" if self.is_pg else "TEXT"
+        # Типы данных
         id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
+        json_type = "JSONB" if self.is_pg else "TEXT"
 
-        # Таблица ТОВАРОВ
+        # Таблица ТОВАРОВ (обновленная структура)
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
                 name TEXT,
                 price REAL,
+                description TEXT,
                 category TEXT,
-                image TEXT,
-                sizes {json_type},
+                images {json_type}, -- Массив ссылок/base64
+                sizes {json_type},   -- Доступность размеров
                 is_available INTEGER DEFAULT 1,
-                badge TEXT
+                size_chart TEXT      -- Ссылка или текст размерной сетки
             )
         """)
         
@@ -92,19 +92,22 @@ class DBManager:
         rows = cur.fetchall()
         res = []
         for r in rows:
-            # Преобразуем JSON-строку в объект, если SQLite
+            # Десериализация JSON
+            images = r['images']
             sizes = r['sizes']
+            if isinstance(images, str): images = json.loads(images)
             if isinstance(sizes, str): sizes = json.loads(sizes)
             
             res.append({
                 "id": r['id'],
                 "name": r['name'],
                 "price": r['price'],
+                "description": r['description'],
                 "category": r['category'],
-                "image": r['image'],
+                "images": images,
                 "sizes": sizes,
                 "isAvailable": bool(r['is_available']),
-                "badge": r['badge']
+                "sizeChart": r['size_chart']
             })
         conn.close()
         return res
@@ -113,17 +116,28 @@ class DBManager:
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
+        
+        images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
+        # Upsert (Вставка или Обновление)
         if self.is_pg:
-            sql = f"""INSERT INTO products (id, name, price, category, image, sizes, is_available, badge)
-                      VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-                      ON CONFLICT (id) DO UPDATE SET 
-                      name=EXCLUDED.name, price=EXCLUDED.price, is_available=EXCLUDED.is_available, sizes=EXCLUDED.sizes, image=EXCLUDED.image"""
+            sql = f"""
+                INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart)
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                ON CONFLICT (id) DO UPDATE SET 
+                name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
+                category=EXCLUDED.category, images=EXCLUDED.images, sizes=EXCLUDED.sizes,
+                is_available=EXCLUDED.is_available, size_chart=EXCLUDED.size_chart
+            """
         else:
-            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
+            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
             
-        cur.execute(sql, (p['id'], p['name'], p['price'], p['category'], p['image'], sizes_json, int(p['isAvailable']), p.get('badge')))
+        cur.execute(sql, (
+            p['id'], p['name'], p['price'], p.get('description', ''), 
+            p['category'], images_json, sizes_json, 
+            int(p['isAvailable']), p.get('sizeChart', '')
+        ))
         conn.commit()
         conn.close()
 
@@ -143,16 +157,46 @@ class DBManager:
         conn.commit()
         conn.close()
 
+    def toggle_size_stock(self, pid, size, status):
+        conn = self.get_conn()
+        cur = conn.cursor()
+        ph = "%s" if self.is_pg else "?"
+        
+        # 1. Получаем текущие размеры
+        cur.execute(f"SELECT sizes FROM products WHERE id={ph}", (pid,))
+        row = cur.fetchone()
+        if row:
+            current_sizes = row[0]
+            if isinstance(current_sizes, str): current_sizes = json.loads(current_sizes)
+            elif hasattr(current_sizes, 'copy'): current_sizes = current_sizes.copy()
+            
+            # 2. Обновляем
+            current_sizes[size] = status
+            
+            # 3. Сохраняем обратно
+            new_json = json.dumps(current_sizes)
+            cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
+            conn.commit()
+        conn.close()
+
     def add_order(self, uid, uname, phone, addr, items, total):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
         items_json = json.dumps(items)
         
-        cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph})", 
-                   (uid, uname, phone, addr, items_json, total))
+        if self.is_pg:
+            cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph}) RETURNING id", 
+                       (uid, uname, phone, addr, items_json, total))
+            oid = cur.fetchone()['id']
+        else:
+            cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph})", 
+                       (uid, uname, phone, addr, items_json, total))
+            oid = cur.lastrowid
+            
         conn.commit()
         conn.close()
+        return oid
 
 db = DBManager()
 
@@ -161,9 +205,13 @@ async def api_get_products(request):
     return web.json_response(db.get_products())
 
 async def api_save_product(request):
-    data = await request.json()
-    db.save_product(data)
-    return web.json_response({"status": "ok"})
+    try:
+        data = await request.json()
+        db.save_product(data)
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        log.error(f"Save error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 async def api_delete_product(request):
     pid = request.match_info['id']
@@ -175,6 +223,11 @@ async def api_toggle_stock(request):
     db.toggle_stock(data['id'], data['status'])
     return web.json_response({"status": "ok"})
 
+async def api_toggle_size(request):
+    data = await request.json()
+    db.toggle_size_stock(data['id'], data['size'], data['status'])
+    return web.json_response({"status": "ok"})
+
 async def serve_index(request):
     try:
         with open("index.html", "r", encoding="utf-8") as f:
@@ -184,7 +237,8 @@ async def serve_index(request):
 
 # --- 4. ТЕЛЕГРАМ БОТ ---
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.enums import ParseMode
+from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -198,7 +252,7 @@ async def cmd_start(m: Message):
         keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
         resize_keyboard=True
     )
-    await m.answer(f"👋 Привет, {m.from_user.first_name}! Магазин готов к работе.", reply_markup=kb)
+    await m.answer(f"👋 Привет, {m.from_user.first_name}!\nДобро пожаловать в KOS Sport. Нажмите кнопку ниже, чтобы открыть каталог.", reply_markup=kb)
 
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
@@ -209,42 +263,61 @@ async def on_webapp_data(m: Message, state: FSMContext):
         await state.update_data(items=items, total=total)
         await state.set_state(OrderFlow.contact)
         
-        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📱 Отправить телефон", request_contact=True)]], resize_keyboard=True)
-        await m.answer(f"✅ Корзина получена!\nСумма: {total:,.0f} UZS.\nПожалуйста, отправьте ваш контакт.", reply_markup=kb)
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📱 Отправить телефон", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
+        
+        # Формируем чек
+        text = "📋 <b>Ваш заказ:</b>\n\n"
+        for i in items:
+            text += f"▪️ {i['name']} ({i['size']})\n   {i['qty']} x {i['price']:,.0f} UZS\n"
+        text += f"\n<b>Итого: {total:,.0f} UZS</b>"
+        text += "\n\n👇 Пожалуйста, отправьте ваш контакт для связи."
+        
+        await m.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML)
     except Exception as e:
         log.error(e)
+        await m.answer("Ошибка обработки данных. Попробуйте снова.")
 
 async def process_contact(m: Message, state: FSMContext):
     phone = m.contact.phone_number if m.contact else m.text
     await state.update_data(phone=phone, name=m.from_user.full_name)
     await state.set_state(OrderFlow.address)
-    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Локация", request_location=True), KeyboardButton(text="Пропустить")]], resize_keyboard=True)
-    await m.answer("📍 Куда доставить? (Локация или текст)", reply_markup=kb)
+    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Локация", request_location=True), KeyboardButton(text="Пропустить")]], resize_keyboard=True, one_time_keyboard=True)
+    await m.answer("📍 Куда доставить заказ? (Отправьте локацию или напишите адрес текстом)", reply_markup=kb)
 
 async def process_finish(m: Message, state: FSMContext):
     data = await state.get_data()
     addr = f"Гео: {m.location.latitude},{m.location.longitude}" if m.location else m.text
     
     # Сохраняем в БД
-    db.add_order(m.from_user.id, data['name'], data['phone'], addr, data['items'], data['total'])
+    order_id = db.add_order(m.from_user.id, data['name'], data['phone'], addr, data['items'], data['total'])
     
-    await m.answer(f"✅ Заказ принят! Менеджер свяжется с вами по номеру {data['phone']}.", reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]], resize_keyboard=True))
+    # Ответ пользователю
+    await m.answer(
+        f"✅ <b>Заказ №{order_id} успешно оформлен!</b>\n\nСумма: {data['total']:,.0f} UZS\nМенеджер свяжется с вами по номеру: {data['phone']}", 
+        reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]], resize_keyboard=True),
+        parse_mode=ParseMode.HTML
+    )
     
-    # Админу
+    # Уведомление админу
     if settings.ADMIN_ID:
-        txt = f"🆕 <b>Новый заказ!</b>\n👤 {data['name']}\n📞 {data['phone']}\n📍 {addr}\n💰 {data['total']:,.0f} UZS"
-        try: await m.bot.send_message(settings.ADMIN_ID, txt, parse_mode="HTML")
+        txt = f"🆕 <b>Новый заказ №{order_id}</b>\n👤 {data['name']}\n📞 {data['phone']}\n📍 {addr}\n💰 <b>{data['total']:,.0f} UZS</b>\n\n📦 <b>Состав:</b>\n"
+        for i in data['items']:
+            txt += f"- {i['name']} ({i['size']}) x{i['qty']}\n"
+            
+        try: await m.bot.send_message(settings.ADMIN_ID, txt, parse_mode=ParseMode.HTML)
         except: pass
+    
     await state.clear()
 
 async def main():
     # WEB APP
-    app = web.Application()
+    app = web.Application(client_max_size=1024**2*10) # 10MB upload limit
     app.router.add_get("/", serve_index)
     app.router.add_get("/api/products", api_get_products)
     app.router.add_post("/api/products", api_save_product)
     app.router.add_delete("/api/products/{id}", api_delete_product)
     app.router.add_post("/api/stock", api_toggle_stock)
+    app.router.add_post("/api/size", api_toggle_size)
     
     runner = web.AppRunner(app)
     await runner.setup()
