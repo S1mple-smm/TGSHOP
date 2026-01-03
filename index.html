@@ -3,187 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KOS Sport Shop</title>
+    <title>KOS Sport (TG Web App)</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); }
+        body { font-family: 'Inter', sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-blue-100">
-    <!-- Nav -->
-    <nav class="sticky top-0 z-50 bg-white border-b p-4 flex justify-between items-center shadow-sm">
-        <div class="font-black text-2xl tracking-tighter">KOS <span class="text-blue-600">SPORT</span></div>
-        <div class="flex items-center gap-4">
-            <input type="text" id="search" placeholder="Поиск..." class="border rounded-full px-4 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="toggleCart()" class="relative">
-                <i class="fas fa-shopping-bag text-xl"></i>
-                <span id="badge" class="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] rounded-full px-1.5 opacity-0 transition-opacity">0</span>
-            </button>
+<body class="text-gray-900 flex flex-col min-h-screen relative selection:bg-blue-200">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <i class="fa-solid fa-user text-3xl text-black mr-2"></i>
+                    <span class="font-extrabold text-2xl tracking-tight">KOS <span class="text-blue-600">SPORT</span></span>
+                </div>
+                <div class="flex-1 max-w-lg mx-8 hidden md:block">
+                    <input type="text" id="mainSearch" class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-full bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Поиск или код...">
+                </div>
+                <div class="flex items-center space-x-6">
+                    <button class="text-gray-500 hover:text-black relative" onclick="toggleCart()">
+                        <i class="fas fa-shopping-bag text-xl"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full opacity-0">0</span>
+                    </button>
+                </div>
+            </div>
+            <div class="pb-4 md:hidden">
+                <input type="text" id="mobileSearch" class="block w-full pl-3 pr-3 py-2 border rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Поиск или код...">
+            </div>
         </div>
     </nav>
 
-    <!-- Main Grid -->
-    <main class="p-4 max-w-7xl mx-auto flex-grow w-full">
-        <div id="loading" class="loader"></div>
-        <div id="grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    <!-- Main Content -->
+    <main id="appContent" class="flex-grow w-full">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex overflow-x-auto hide-scrollbar gap-3 mb-8">
+                <button onclick="filterCategory('All')" class="px-6 py-2 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all text-sm font-bold">Все</button>
+                <button onclick="filterCategory('Shoes')" class="px-6 py-2 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all text-sm font-bold">Обувь</button>
+                <button onclick="filterCategory('Apparel')" class="px-6 py-2 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all text-sm font-bold">Одежда</button>
+                <button onclick="filterCategory('Equipment')" class="px-6 py-2 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all text-sm font-bold">Инвентарь</button>
+            </div>
+
+            <div id="loading" class="loader"></div>
+            <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-6 gap-x-4"></div>
+        </div>
     </main>
 
-    <!-- Cart Panel -->
-    <div id="cartOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden backdrop-blur-sm" onclick="toggleCart()"></div>
-    <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-[70] transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
-        <div class="p-6 border-b flex justify-between items-center">
-            <h2 class="text-xl font-bold">Корзина</h2>
-            <button onclick="toggleCart()"><i class="fas fa-times text-xl"></i></button>
-        </div>
-        <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-        <div class="p-6 border-t bg-gray-50">
-            <div class="flex justify-between font-bold text-lg mb-4"><span>Итого</span><span id="cartTotal">0 UZS</span></div>
-            <p class="text-xs text-center text-gray-400">Нажмите ЗАКАЗАТЬ в меню Telegram</p>
+    <!-- Cart Sidebar -->
+    <div id="cartOverlay" class="fixed inset-0 overflow-hidden z-[60] hidden">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-25 backdrop-blur-sm" onclick="toggleCart()"></div>
+        <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+            <div class="w-screen max-w-md transform translate-x-full transition duration-300 bg-white shadow-2xl flex flex-col h-full" id="cartPanel">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Корзина</h2>
+                    <button onclick="toggleCart()"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div class="flex-1 py-6 overflow-y-auto px-4" id="cartItemsContainer"></div>
+                <div class="border-t p-6 bg-gray-50">
+                    <div class="flex justify-between font-bold mb-4"><p>Итого</p><p id="cartTotal">0 UZS</p></div>
+                    <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">ОФОРМИТЬ</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Admin (Secret 4443) -->
-    <div id="adminModal" class="fixed inset-0 bg-gray-100 z-[100] hidden overflow-y-auto p-4">
-        <div class="max-w-3xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Склад KOS</h2>
-                <button onclick="closeAdmin()" class="border px-4 py-1 rounded-full bg-white">Закрыть</button>
+    <!-- Product Modal -->
+    <div id="productModal" class="fixed inset-0 z-[65] hidden">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm" onclick="closeProductModal()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pointer-events-none">
+            <div class="bg-white rounded-2xl max-w-4xl w-full pointer-events-auto overflow-hidden relative flex flex-col md:flex-row">
+                <button class="absolute top-4 right-4 z-10 bg-white/50 p-2 rounded-full" onclick="closeProductModal()"><i class="fas fa-times"></i></button>
+                <div id="productModalContent" class="flex flex-col md:flex-row w-full"></div>
             </div>
-            <form id="addForm" class="bg-white p-6 rounded-2xl shadow-sm mb-8 space-y-4">
-                <input type="text" id="aName" placeholder="Название" required class="w-full border p-3 rounded-xl">
-                <div class="flex gap-4">
-                    <input type="number" id="aPrice" placeholder="Цена" required class="w-full border p-3 rounded-xl">
-                    <select id="aCat" class="w-full border p-3 rounded-xl">
-                        <option value="Shoes">Обувь</option>
-                        <option value="Apparel">Одежда</option>
-                        <option value="Equipment">Инвентарь</option>
-                        <option value="Accessories">Аксессуары</option>
-                    </select>
-                </div>
-                <input type="text" id="aImg" placeholder="URL картинки" class="w-full border p-3 rounded-xl">
-                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700">СОХРАНИТЬ</button>
-            </form>
-            <div id="adminList" class="space-y-2"></div>
         </div>
     </div>
+
+    <!-- Admin Panel -->
+    <div id="adminModal" class="fixed inset-0 z-[100] hidden bg-gray-100 overflow-y-auto">
+        <div class="max-w-7xl mx-auto p-4 min-h-screen">
+            <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm">
+                <h1 class="text-xl font-bold text-gray-900">Админ KOS (База Данных)</h1>
+                <button onclick="closeAdminPanel()" class="border px-4 py-2 rounded-full font-bold">Выйти</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm h-fit">
+                    <h3 class="font-bold mb-4">Добавить товар</h3>
+                    <form id="addProductForm" class="space-y-4">
+                        <input type="text" id="adminName" required class="w-full border p-3 rounded-lg" placeholder="Название">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="adminPrice" required class="w-full border p-3 rounded-lg" placeholder="Цена">
+                            <select id="adminCategory" class="w-full border p-3 rounded-lg">
+                                <option value="Shoes">Обувь</option>
+                                <option value="Apparel">Одежда</option>
+                                <option value="Equipment">Инвентарь</option>
+                                <option value="Accessories">Аксессуары</option>
+                            </select>
+                        </div>
+                        <input type="text" id="adminImage" class="w-full border p-3 rounded-lg" placeholder="Ссылка на фото">
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-full font-bold">Сохранить в базу</button>
+                    </form>
+                </div>
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 class="font-bold mb-4">Текущий склад</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><tbody id="adminProductTable"></tbody></table></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg opacity-0 transition-opacity z-[110]"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
+        tg.expand();
+
         let products = [];
         let cart = [];
+        let currentProduct = null;
+        let currentQuantity = 1;
+        let selectedSize = null;
+        const SECRET_CODE = "4443";
 
-        async function loadData() {
+        // --- API FUNCTIONS ---
+        async function fetchProducts() {
             document.getElementById('loading').style.display = 'block';
             try {
                 const res = await fetch('/api/products');
                 products = await res.json();
-                renderGrid();
-            } catch (e) { console.error("API Error", e); }
-            finally { document.getElementById('loading').style.display = 'none'; }
-        }
-
-        function renderGrid() {
-            const container = document.getElementById('grid');
-            container.innerHTML = products.map(p => `
-                <div class="bg-white border rounded-2xl p-2 active:scale-95 transition-transform" onclick="addToCart('${p.id}')">
-                    <div class="aspect-square rounded-xl overflow-hidden bg-gray-50 mb-2">
-                        <img src="${p.image}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="font-bold text-sm truncate px-1">${p.name}</div>
-                    <div class="text-blue-600 font-bold text-xs px-1">${p.price.toLocaleString()} UZS</div>
-                </div>
-            `).join('');
-        }
-
-        // Search Admin Trigger
-        document.getElementById('search').addEventListener('input', e => {
-            if(e.target.value === '4443') {
-                document.getElementById('adminModal').classList.remove('hidden');
-                renderAdminList();
-                e.target.value = '';
+                renderProducts(products);
+            } catch (e) {
+                showToast("Ошибка соединения с базой");
+            } finally {
+                document.getElementById('loading').style.display = 'none';
             }
-        });
-
-        function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
-
-        async function renderAdminList() {
-            const list = document.getElementById('adminList');
-            list.innerHTML = products.map(p => `
-                <div class="bg-white p-3 rounded-xl border flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <img src="${p.image}" class="w-10 h-10 rounded object-cover">
-                        <span class="font-bold text-sm">${p.name}</span>
-                    </div>
-                    <button onclick="deleteProd('${p.id}')" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>
-                </div>
-            `).join('');
         }
 
-        async function deleteProd(id) {
-            if(!confirm("Удалить из базы?")) return;
-            await fetch(`/api/products/${id}`, { method: 'DELETE' });
-            await loadData(); renderAdminList();
-        }
-
-        document.getElementById('addForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const prod = {
-                id: 'p' + Date.now(),
-                name: document.getElementById('aName').value,
-                price: parseFloat(document.getElementById('aPrice').value),
-                category: document.getElementById('aCat').value,
-                image: document.getElementById('aImg').value || 'https://via.placeholder.com/300',
-                isAvailable: 1,
-                sizes: { 'Standard': true }
-            };
+        async function saveToDb(prod) {
             await fetch('/api/products', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(prod)
             });
-            await loadData(); renderAdminList(); e.target.reset();
+            await fetchProducts();
+            renderAdminTable();
         }
 
-        function addToCart(id) {
-            const p = products.find(x => x.id === id);
-            cart.push({...p, qty: 1, cartId: Date.now()});
-            updateCart();
-            tg.HapticFeedback.impactOccurred('medium');
+        async function deleteFromDb(id) {
+            if(!confirm("Удалить из базы?")) return;
+            await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            await fetchProducts();
+            renderAdminTable();
         }
 
-        function updateCart() {
-            const b = document.getElementById('badge');
-            b.innerText = cart.length;
-            b.style.opacity = cart.length > 0 ? '1' : '0';
-            
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            document.getElementById('cartTotal').innerText = total.toLocaleString() + ' UZS';
+        async function toggleStockDb(id, status) {
+            await fetch('/api/stock', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id, status: !status})
+            });
+            await fetchProducts();
+            renderAdminTable();
+        }
 
-            document.getElementById('cartItems').innerHTML = cart.map((i, idx) => `
-                <div class="flex gap-4 border-b pb-2">
-                    <img src="${i.image}" class="w-12 h-12 rounded object-cover">
-                    <div class="flex-1">
-                        <div class="font-bold text-sm">${i.name}</div>
-                        <div class="text-xs text-gray-400">${i.price.toLocaleString()} UZS</div>
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchProducts();
+            tg.MainButton.textColor = '#FFFFFF';
+            tg.MainButton.color = '#3b82f6';
+        });
+
+        // --- RENDER ---
+        function renderProducts(items) {
+            const container = document.getElementById('productGrid');
+            container.innerHTML = items.map(p => `
+                <div class="group relative cursor-pointer flex flex-col" onclick="openProductModal('${p.id}')">
+                    <div class="aspect-square w-full overflow-hidden rounded-xl bg-gray-100 relative mb-2">
+                        <img src="${p.image}" class="h-full w-full object-cover">
+                        ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/60 flex items-center justify-center font-bold text-red-600">НЕТ В НАЛИЧИИ</div>' : ''}
                     </div>
-                    <button onclick="cart.splice(${idx},1); updateCart();" class="text-red-500"><i class="fas fa-trash"></i></button>
+                    <div>
+                        <p class="text-xs text-gray-500">${p.category}</p>
+                        <h3 class="font-bold text-sm truncate">${p.name}</h3>
+                        <span class="text-blue-600 font-bold text-sm">${formatMoney(p.price)}</span>
+                    </div>
                 </div>
             `).join('');
-
-            if(total > 0) {
-                tg.MainButton.setText(`ЗАКАЗАТЬ: ${total.toLocaleString()} UZS`);
-                tg.MainButton.show();
-            } else tg.MainButton.hide();
         }
 
+        // --- ADMIN ---
+        const handleSearch = (val) => {
+            if (val.trim() === SECRET_CODE) {
+                openAdminPanel();
+                document.getElementById('mainSearch').value = '';
+                return;
+            }
+            const filtered = products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+            renderProducts(filtered);
+        };
+        document.getElementById('mainSearch').addEventListener('input', e => handleSearch(e.target.value));
+
+        function openAdminPanel() {
+            renderAdminTable();
+            document.getElementById('adminModal').classList.remove('hidden');
+        }
+        function closeAdminPanel() { document.getElementById('adminModal').classList.add('hidden'); }
+
+        function renderAdminTable() {
+            document.getElementById('adminProductTable').innerHTML = products.map(p => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 flex items-center gap-3">
+                        <img src="${p.image}" class="w-10 h-10 rounded object-cover">
+                        <span class="font-bold text-sm truncate w-32">${p.name}</span>
+                    </td>
+                    <td class="p-3">
+                        <button onclick="toggleStockDb('${p.id}', ${p.isAvailable})" class="px-2 py-1 text-xs rounded border ${p.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">
+                            ${p.isAvailable ? 'В наличии' : 'Нет'}
+                        </button>
+                    </td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteFromDb('${p.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('addProductForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('adminName').value;
+            const price = parseFloat(document.getElementById('adminPrice').value);
+            const cat = document.getElementById('adminCategory').value;
+            const img = document.getElementById('adminImage').value || 'https://via.placeholder.com/300';
+            
+            let sizes = {};
+            if(cat === 'Shoes') for(let i=38; i<=45; i++) sizes[i] = true;
+            else if(cat === 'Apparel') ['S','M','L','XL'].forEach(s => sizes[s]=true);
+            else sizes = {'Standard': true};
+
+            const prod = {
+                id: 'p_' + Date.now(),
+                name, price, category: cat, image: img, sizes, isAvailable: true, badge: 'New'
+            };
+            saveToDb(prod);
+            e.target.reset();
+            showToast("Товар сохранен!");
+        });
+
+        // --- CART & MODALS ---
         function toggleCart() {
             const p = document.getElementById('cartPanel');
             const o = document.getElementById('cartOverlay');
-            if(o.classList.contains('hidden')) {
+            if (o.classList.contains('hidden')) {
                 o.classList.remove('hidden');
                 setTimeout(() => p.classList.remove('translate-x-full'), 10);
             } else {
@@ -192,11 +267,113 @@
             }
         }
 
-        tg.onEvent('mainButtonClicked', () => {
-            tg.sendData(json.stringify({ items: cart.map(i => ({ name: i.name, price: i.price, qty: i.qty, size: '-' })) }));
+        function openProductModal(id) {
+            currentProduct = products.find(p => p.id === id);
+            if (!currentProduct) return;
+            currentQuantity = 1;
+            selectedSize = null;
+            
+            const sizes = Object.entries(currentProduct.sizes).sort();
+            const isNoSize = sizes.length === 1 && sizes[0][0] === 'Standard';
+            if (isNoSize) selectedSize = 'Standard';
+
+            document.getElementById('productModalContent').innerHTML = `
+                <div class="w-full md:w-1/2 bg-gray-100 relative h-64 md:h-auto"><img src="${currentProduct.image}" class="w-full h-full object-cover"></div>
+                <div class="w-full md:w-1/2 p-6 flex flex-col">
+                    <h2 class="text-2xl font-extrabold mb-2">${currentProduct.name}</h2>
+                    <p class="text-xl font-bold text-blue-600 mb-4">${formatMoney(currentProduct.price)}</p>
+                    ${!isNoSize ? `<div class="mb-6"><label class="font-bold block mb-2">Размер</label><div class="flex flex-wrap gap-2">
+                        ${sizes.map(([s, avail]) => `<button onclick="selectSize('${s}')" class="size-btn px-4 py-2 border rounded-lg text-sm font-bold ${!avail ? 'opacity-50' : 'hover:border-black'}" data-size="${s}" ${!avail ? 'disabled' : ''}>${s}</button>`).join('')}
+                    </div></div>` : ''}
+                    <div class="flex items-center gap-4 mb-6">
+                        <button onclick="updateQty(-1)" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-100">-</button>
+                        <span id="qtyDisplay" class="font-bold text-xl">1</span>
+                        <button onclick="updateQty(1)" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-100">+</button>
+                    </div>
+                    <button id="addToCartBtn" onclick="addToCart()" disabled class="w-full bg-black text-white py-4 rounded-xl font-bold disabled:opacity-50">
+                        ${!currentProduct.isAvailable ? 'Нет в наличии' : (isNoSize ? 'В корзину' : 'Выберите размер')}
+                    </button>
+                </div>
+            `;
+            document.getElementById('productModal').classList.remove('hidden');
+            if(isNoSize) updateBtn();
+        }
+        function closeProductModal() { document.getElementById('productModal').classList.add('hidden'); }
+
+        window.selectSize = (s) => {
+            selectedSize = s;
+            document.querySelectorAll('.size-btn').forEach(b => {
+                b.classList.remove('bg-black','text-white');
+                if(b.dataset.size === s) b.classList.add('bg-black','text-white');
+            });
+            updateBtn();
+        }
+        window.updateQty = (d) => { currentQuantity = Math.max(1, currentQuantity + d); document.getElementById('qtyDisplay').innerText = currentQuantity; updateBtn(); }
+        
+        function updateBtn() {
+            const btn = document.getElementById('addToCartBtn');
+            if(selectedSize) {
+                btn.disabled = false;
+                btn.innerText = `В корзину — ${formatMoney(currentProduct.price * currentQuantity)}`;
+            }
+        }
+
+        window.addToCart = () => {
+            cart.push({...currentProduct, qty: currentQuantity, selectedSize, cartId: Date.now()});
+            updateCartUI();
+            closeProductModal();
+            showToast("Добавлено!");
+        }
+
+        window.removeFromCart = (id) => {
+            cart = cart.filter(c => c.cartId !== id);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const count = document.getElementById('cartCount');
+            count.innerText = cart.length;
+            count.classList.toggle('opacity-0', cart.length === 0);
+            
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            document.getElementById('cartTotal').innerText = formatMoney(total);
+            
+            document.getElementById('cartItemsContainer').innerHTML = cart.map(i => `
+                <div class="flex gap-4 mb-4">
+                    <img src="${i.image}" class="w-16 h-16 rounded object-cover">
+                    <div class="flex-1">
+                        <div class="flex justify-between font-bold text-sm"><h3>${i.name}</h3><span>${formatMoney(i.price * i.qty)}</span></div>
+                        <div class="text-xs text-gray-500">${i.selectedSize} x${i.qty}</div>
+                        <button onclick="removeFromCart(${i.cartId})" class="text-red-500 text-xs mt-1">Удалить</button>
+                    </div>
+                </div>
+            `).join('');
+
+            if(total > 0) {
+                tg.MainButton.setText(`ЗАКАЗАТЬ: ${formatMoney(total)}`);
+                tg.MainButton.show();
+            } else tg.MainButton.hide();
+        }
+
+        Telegram.WebApp.onEvent('mainButtonClicked', () => {
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            tg.sendData(JSON.stringify({
+                items: cart.map(i => ({name: i.name, qty: i.qty, size: i.selectedSize, price: i.price})),
+                total_price: total
+            }));
         });
 
-        window.onload = loadData;
+        // Helpers
+        function formatMoney(n) { return new Intl.NumberFormat('ru-RU').format(n) + ' UZS'; }
+        function filterCategory(cat) {
+            if(cat === 'All') renderProducts(products);
+            else renderProducts(products.filter(p => p.category === cat));
+        }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.classList.remove('opacity-0');
+            setTimeout(() => t.classList.add('opacity-0'), 2000);
+        }
     </script>
 </body>
 </html>
