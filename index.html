@@ -14,7 +14,6 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .swiper-pagination-bullet-active { background-color: #000 !important; }
         
-        /* Mobile specific adjustments */
         input:focus { font-size: 16px; } 
         
         .line-clamp-3 {
@@ -24,14 +23,28 @@
             overflow: hidden;
         }
         
-        /* Smooth modal animation */
         #productModal { transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1); }
         .modal-open { transform: translateY(0) !important; }
         
-        /* Custom Table Styles */
-        .size-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
-        .size-table th, .size-table td { border: 1px solid #f3f4f6; padding: 8px 4px; text-align: center; }
-        .size-table th { background-color: #1f2937; color: white; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Стили для таблицы размеров */
+        .size-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 11px; 
+            margin-top: 5px; 
+            background: white;
+        }
+        .size-table th, .size-table td { 
+            border: 1px solid #e5e7eb; 
+            padding: 8px 4px; 
+            text-align: center; 
+        }
+        .size-table th { 
+            background-color: #f3f4f6; 
+            color: #374151; 
+            font-weight: 700; 
+            text-transform: uppercase;
+        }
         .size-table tr:nth-child(even) { background-color: #f9fafb; }
     </style>
 </head>
@@ -44,14 +57,14 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <!-- Search Container -->
+            <!-- Search -->
             <div class="relative group">
                 <input type="text" id="searchInput" placeholder="Поиск" 
                        class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
                 <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
             </div>
             
-            <!-- Cart Button -->
+            <!-- Cart -->
             <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
                 <i class="fas fa-shopping-bag text-xl"></i>
                 <span id="cartBadge" class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
@@ -61,7 +74,7 @@
 
     <!-- Main Content -->
     <main class="max-w-xl mx-auto p-4 w-full" id="mainContent">
-        <!-- Categories (Horizontal Scroll) -->
+        <!-- Categories -->
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[60px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
             <button onclick="filter('All')" class="cat-btn bg-black text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-sm">Все</button>
             <button onclick="filter('Shoes')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Обувь</button>
@@ -69,7 +82,7 @@
             <button onclick="filter('Equipment')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Инвентарь</button>
         </div>
 
-        <!-- Product Grid -->
+        <!-- Grid -->
         <div id="loader" class="flex justify-center py-20"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i></div>
         <div id="productGrid" class="grid grid-cols-2 gap-3 sm:gap-4"></div>
     </main>
@@ -77,10 +90,10 @@
     <!-- PRODUCT MODAL BACKDROP -->
     <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
 
-    <!-- PRODUCT MODAL (Bottom Sheet Style) -->
+    <!-- PRODUCT MODAL (Bottom Sheet) -->
     <div id="productModal" class="fixed bottom-0 left-0 right-0 z-[55] bg-white rounded-t-[30px] h-[85vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full">
         
-        <!-- Handle -->
+        <!-- Drag Handle -->
         <div class="w-full flex justify-center pt-3 pb-1" onclick="closeModal()">
             <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
@@ -90,9 +103,9 @@
             <i class="fas fa-times text-gray-500"></i>
         </button>
         
-        <!-- Scrollable Content -->
+        <!-- Content -->
         <div class="overflow-y-auto flex-1 pb-24">
-            <!-- Image Carousel -->
+            <!-- Carousel -->
             <div class="swiper mySwiper w-full h-[40vh] bg-white mt-2">
                 <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
                 <div class="swiper-pagination"></div>
@@ -115,17 +128,19 @@
                     <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden">Читать далее</button>
                 </div>
 
-                <!-- Size Chart Section -->
-                <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center text-xs font-bold text-gray-700 uppercase">
+                <!-- SIZE CHART ACCORDION -->
+                <div class="mb-4 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
+                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-3 text-xs font-bold text-gray-700 uppercase active:bg-gray-100">
                         <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
-                        <i class="fas fa-chevron-down transition-transform" id="sizeChartArrow"></i>
+                        <i class="fas fa-chevron-down transition-transform duration-300" id="sizeChartArrow"></i>
                     </button>
-                    <!-- Content -->
-                    <div id="sizeChartContainer" class="hidden mt-3 pt-2 border-t border-gray-200"></div>
+                    <!-- Container for the table -->
+                    <div id="sizeChartContainer" class="hidden px-3 pb-3 pt-0 border-t border-gray-200">
+                        <!-- Table will be injected here -->
+                    </div>
                 </div>
 
-                <!-- Size Selector -->
+                <!-- Sizes -->
                 <div class="mb-4">
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Выберите размер</label>
                     <div id="mSizes" class="flex flex-wrap gap-2"></div>
@@ -186,6 +201,7 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <input type="number" id="aPrice" placeholder="Цена" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none">
                                 <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none">
+                                    <option value="" disabled selected>Выберите категорию</option>
                                     <option value="Shoes">Обувь</option>
                                     <option value="Apparel">Форма</option>
                                     <option value="Equipment">Экипировка</option>
@@ -208,15 +224,11 @@
                                 <div id="photoPreviewContainer" class="grid grid-cols-4 gap-2 mt-2"></div>
                             </div>
 
-                            <!-- SIZE CHART TEXT AREA -->
+                            <!-- SIZE CHART TEXT AREA (Hidden mostly, auto-filled) -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Размерная сетка (Редактируемая)</label>
-                                <textarea id="aSizeChartText" class="w-full border-gray-200 border p-3 rounded-lg text-sm h-32 outline-none resize-none font-mono text-xs whitespace-pre" 
-                                placeholder="Размер,Бедра (см),Вес (кг),Рост (см)&#10;S,90-96,55-65,165-170&#10;M,96-102,65-75,170-175"></textarea>
-                                <p class="text-[10px] text-gray-400 mt-1 flex justify-between">
-                                    <span>Формат: Заголовок,Столбец2... (через запятую)</span>
-                                    <button type="button" onclick="fillTemplate('Apparel')" class="text-blue-600 font-bold hover:underline">Вставить шаблон</button>
-                                </p>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Размерная таблица (Заполнится автоматически)</label>
+                                <textarea id="aSizeChartText" class="w-full border-gray-200 border p-3 rounded-lg text-sm h-24 outline-none resize-none font-mono text-xs whitespace-pre bg-gray-50" 
+                                placeholder="Выберите категорию выше, чтобы заполнить таблицу..."></textarea>
                             </div>
                         </div>
 
@@ -258,46 +270,35 @@
             }
         });
 
-        // AUTO-FILL Size Chart based on Category
-        document.getElementById('aCat').addEventListener('change', function() {
-            fillTemplate(this.value);
-        });
-
-        function fillTemplate(cat) {
-            const textArea = document.getElementById('aSizeChartText');
-            if (cat === 'Apparel') {
-                textArea.value = "Размер,Бедра (см),Вес (кг),Рост (см)\n" +
-                                 "S,90-96,55-65,165-170\n" +
-                                 "M,96-102,65-75,170-175\n" +
-                                 "L,102-108,75-85,175-180\n" +
-                                 "XL,108-114,85-95,180-185\n" +
-                                 "2XL,114-120,95+,185+";
-            } else if (cat === 'Shoes') {
-                textArea.value = "Размер,Длина стопы (см)\n" +
-                                 "38,24.5\n39,25.0\n40,25.5\n41,26.5\n42,27.0\n43,27.5\n44,28.5\n45,29.5";
-            } else {
-                textArea.value = "";
-            }
-        }
-
-        function toggleDesc() {
-            const desc = document.getElementById('mDesc');
-            const btn = document.getElementById('readMoreBtn');
-            if (desc.classList.contains('line-clamp-3')) {
-                desc.classList.remove('line-clamp-3');
-                btn.innerText = 'Свернуть';
-            } else {
-                desc.classList.add('line-clamp-3');
-                btn.innerText = 'Читать далее';
-            }
-        }
-
+        // --- SIZE CHART LOGIC (ACCORDION) ---
         function toggleSizeChart() {
             const container = document.getElementById('sizeChartContainer');
             const arrow = document.getElementById('sizeChartArrow');
             container.classList.toggle('hidden');
             arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
+
+        // --- ADMIN: AUTO FILL TABLE ---
+        document.getElementById('aCat').addEventListener('change', function() {
+            const textArea = document.getElementById('aSizeChartText');
+            if (this.value === 'Apparel') {
+                textArea.value = 
+                    "Размер,Бедра (см),Вес (кг),Рост (см)\n" +
+                    "S,90-96,55-65,165-170\n" +
+                    "M,96-102,65-75,170-175\n" +
+                    "L,102-108,75-85,175-180\n" +
+                    "XL,108-114,85-95,180-185\n" +
+                    "2XL,114-120,95+,185+";
+            } else if (this.value === 'Shoes') {
+                textArea.value = 
+                    "Размер,Стопа (см)\n" +
+                    "38,24.5\n39,25.0\n40,25.5\n41,26.5\n42,27.0\n43,27.5\n44,28.5\n45,29.5";
+            } else if (this.value === 'Equipment') {
+                textArea.value = "Стандарт,Размер\nOneSize,Универсальный";
+            } else {
+                textArea.value = "";
+            }
+        });
 
         // --- API ---
         async function loadProducts() {
@@ -389,6 +390,7 @@
             qty = 1;
             document.getElementById('mQty').innerText = 1;
             
+            // UI Reset
             document.getElementById('sizeChartContainer').classList.add('hidden');
             document.getElementById('sizeChartArrow').style.transform = 'rotate(0deg)';
 
@@ -403,12 +405,14 @@
             btnEl.innerText = 'Читать далее';
             btnEl.style.display = descEl.innerText.length > 100 ? 'block' : 'none';
 
-            // GENERATE HTML TABLE FROM TEXT
-            const container = document.getElementById('sizeChartContainer');
+            // --- GENERATE TABLE ---
+            const scContainer = document.getElementById('sizeChartContainer');
+            // Проверяем, есть ли данные в формате CSV (содержат запятую и перевод строки)
             if (currentProduct.sizeChart && currentProduct.sizeChart.includes(',')) {
-                container.innerHTML = generateTableFromCSV(currentProduct.sizeChart);
+                scContainer.innerHTML = generateTableFromCSV(currentProduct.sizeChart);
             } else {
-                container.innerHTML = `<div class="text-xs text-gray-500">${currentProduct.sizeChart || 'Таблица не указана'}</div>`;
+                // Иначе просто текст
+                scContainer.innerHTML = `<div class="text-xs text-gray-500 py-2">${currentProduct.sizeChart || 'Таблица не указана'}</div>`;
             }
 
             // Carousel
@@ -442,7 +446,7 @@
             }, 10);
         }
 
-        // CSV to HTML Table Converter
+        // CSV Parser
         function generateTableFromCSV(text) {
             const rows = text.trim().split('\n');
             if (rows.length === 0) return '';
@@ -459,6 +463,18 @@
             });
             html += '</table>';
             return html;
+        }
+
+        function toggleDesc() {
+            const desc = document.getElementById('mDesc');
+            const btn = document.getElementById('readMoreBtn');
+            if (desc.classList.contains('line-clamp-3')) {
+                desc.classList.remove('line-clamp-3');
+                btn.innerText = 'Свернуть';
+            } else {
+                desc.classList.add('line-clamp-3');
+                btn.innerText = 'Читать далее';
+            }
         }
 
         function closeModal() {
