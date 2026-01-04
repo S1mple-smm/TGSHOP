@@ -33,7 +33,6 @@ class DBManager:
     def __init__(self):
         # ДИАГНОСТИКА: Почему не работает Postgres?
         self.check_connection_status()
-        
         self.is_pg = bool(settings.DATABASE_URL and psycopg2)
         self.init_db()
 
@@ -41,15 +40,12 @@ class DBManager:
         print("------------------------------------------------")
         if not settings.DATABASE_URL:
             log.warning("❌ [ОШИБКА] Переменная DATABASE_URL не найдена в настройках Render!")
-            log.info("👉 Зайдите в Render -> Environment и добавьте DATABASE_URL")
         else:
-            # Скрываем пароль в логах, показываем только начало
             masked_url = settings.DATABASE_URL[:20] + "..." if settings.DATABASE_URL else "None"
             log.info(f"✅ Переменная DATABASE_URL найдена: {masked_url}")
 
         if not psycopg2:
             log.warning("❌ [ОШИБКА] Библиотека 'psycopg2' не установлена!")
-            log.info("👉 Проверьте файл requirements.txt, там должно быть: psycopg2-binary")
         else:
             log.info("✅ Библиотека psycopg2 успешно загружена")
         
@@ -182,11 +178,27 @@ class DBManager:
         cur.execute(f"SELECT sizes FROM products WHERE id={ph}", (pid,))
         row = cur.fetchone()
         if row:
-            current_sizes = row[0]
-            if isinstance(current_sizes, str): current_sizes = json.loads(current_sizes)
-            elif hasattr(current_sizes, 'copy'): current_sizes = current_sizes.copy()
+            # ИСПРАВЛЕНИЕ ОШИБКИ KeyError: 0
+            if self.is_pg:
+                # В Postgres row - это RealDictRow (словарь)
+                current_sizes = row['sizes']
+            else:
+                # В SQLite row - это Row (можно по индексу или имени)
+                current_sizes = row['sizes']
+
+            # Десериализация, если строка (SQLite возвращает строку)
+            if isinstance(current_sizes, str):
+                current_sizes = json.loads(current_sizes)
+            elif hasattr(current_sizes, 'copy'): 
+                current_sizes = current_sizes.copy()
+            
+            # Если вдруг current_sizes все еще None или не dict (на всякий случай)
+            if not isinstance(current_sizes, dict):
+                current_sizes = {}
+
             current_sizes[size] = status
             new_json = json.dumps(current_sizes)
+            
             cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
             conn.commit()
         conn.close()
