@@ -12,9 +12,10 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .swiper-pagination-bullet-active { background-color: #000 !important; }
         
         /* Mobile specific adjustments */
-        input:focus { font-size: 16px; } /* Prevent zoom on iOS */
+        input:focus { font-size: 16px; } 
         
         .line-clamp-3 {
             display: -webkit-box;
@@ -26,6 +27,12 @@
         /* Smooth modal animation */
         #productModal { transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1); }
         .modal-open { transform: translateY(0) !important; }
+        
+        /* Custom Table Styles */
+        .size-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
+        .size-table th, .size-table td { border: 1px solid #f3f4f6; padding: 8px 4px; text-align: center; }
+        .size-table th { background-color: #1f2937; color: white; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .size-table tr:nth-child(even) { background-color: #f9fafb; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
@@ -71,9 +78,9 @@
     <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
 
     <!-- PRODUCT MODAL (Bottom Sheet Style) -->
-    <div id="productModal" class="fixed bottom-0 left-0 right-0 z-[55] bg-white rounded-t-[30px] h-[75vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full">
+    <div id="productModal" class="fixed bottom-0 left-0 right-0 z-[55] bg-white rounded-t-[30px] h-[85vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full">
         
-        <!-- Handle for dragging feel -->
+        <!-- Handle -->
         <div class="w-full flex justify-center pt-3 pb-1" onclick="closeModal()">
             <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
@@ -85,10 +92,10 @@
         
         <!-- Scrollable Content -->
         <div class="overflow-y-auto flex-1 pb-24">
-            <!-- Image Carousel (Smaller height, contain fit) -->
-            <div class="swiper mySwiper w-full h-[35vh] bg-white mt-2">
+            <!-- Image Carousel -->
+            <div class="swiper mySwiper w-full h-[40vh] bg-white mt-2">
                 <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
-                <!-- Pagination removed -->
+                <div class="swiper-pagination"></div>
             </div>
 
             <div class="p-5 flex flex-col">
@@ -102,19 +109,20 @@
 
                 <p class="text-xs text-gray-400 mb-4 uppercase font-bold tracking-widest" id="mCategory"></p>
 
-                <!-- Description with Read More -->
+                <!-- Description -->
                 <div class="mb-6 relative">
                     <p id="mDesc" class="text-gray-600 text-sm leading-relaxed line-clamp-3 transition-all duration-300"></p>
                     <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden">Читать далее</button>
                 </div>
 
-                <!-- Size Chart -->
+                <!-- Size Chart Section -->
                 <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
                     <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center text-xs font-bold text-gray-700 uppercase">
                         <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
                         <i class="fas fa-chevron-down transition-transform" id="sizeChartArrow"></i>
                     </button>
-                    <div id="sizeChartBlock" class="hidden mt-3 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed border-t border-gray-200 pt-2"></div>
+                    <!-- Content -->
+                    <div id="sizeChartContainer" class="hidden mt-3 pt-2 border-t border-gray-200"></div>
                 </div>
 
                 <!-- Size Selector -->
@@ -125,7 +133,7 @@
             </div>
         </div>
 
-        <!-- Bottom Action Bar (Fixed inside modal) -->
+        <!-- Bottom Action Bar -->
         <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50">
             <div class="flex items-center border border-gray-200 rounded-xl h-12 bg-gray-50">
                 <button onclick="updateQty(-1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-l-xl text-lg font-bold text-gray-500">-</button>
@@ -187,14 +195,29 @@
 
                             <textarea id="aDesc" placeholder="Описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none"></textarea>
 
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
-                                <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
-                                <div class="text-gray-400 text-xs font-bold pointer-events-none">
-                                    <i class="fas fa-camera text-xl mb-1 block"></i>
-                                    Нажмите для загрузки фото (макс 10)
+                            <!-- PHOTO UPLOAD -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Фото (Макс 10)</label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
+                                    <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                                    <div class="text-gray-400 text-xs font-bold pointer-events-none">
+                                        <i class="fas fa-camera text-xl mb-1 block"></i>
+                                        Нажмите для выбора
+                                    </div>
                                 </div>
+                                <div id="photoPreviewContainer" class="grid grid-cols-4 gap-2 mt-2"></div>
                             </div>
-                            <div id="photoPreview" class="flex gap-2 overflow-x-auto h-16 empty:hidden pb-1"></div>
+
+                            <!-- SIZE CHART TEXT AREA -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Размерная сетка (Редактируемая)</label>
+                                <textarea id="aSizeChartText" class="w-full border-gray-200 border p-3 rounded-lg text-sm h-32 outline-none resize-none font-mono text-xs whitespace-pre" 
+                                placeholder="Размер,Бедра (см),Вес (кг),Рост (см)&#10;S,90-96,55-65,165-170&#10;M,96-102,65-75,170-175"></textarea>
+                                <p class="text-[10px] text-gray-400 mt-1 flex justify-between">
+                                    <span>Формат: Заголовок,Столбец2... (через запятую)</span>
+                                    <button type="button" onclick="fillTemplate('Apparel')" class="text-blue-600 font-bold hover:underline">Вставить шаблон</button>
+                                </p>
+                            </div>
                         </div>
 
                         <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm mt-4 shadow-lg active:scale-95 transition-transform">
@@ -203,7 +226,6 @@
                     </div>
                 </form>
 
-                <!-- Product List -->
                 <div>
                     <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1">Управление товарами</h3>
                     <div id="adminList" class="space-y-3"></div>
@@ -219,18 +241,16 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // State
         let products = [];
         let cart = [];
         let currentProduct = null;
         let selectedSize = null;
         let qty = 1;
         let uploadedImages = [];
-        let productSwiper = null; // Store swiper instance
+        let productSwiper = null; 
         const SECRET_CODE = "4443";
 
-        // --- UX ENHANCEMENTS ---
-        // 1. Close search on click outside
+        // --- UX ---
         document.addEventListener('click', (e) => {
             const searchContainer = document.getElementById('searchInput').parentElement;
             if (!searchContainer.contains(e.target) && document.activeElement === document.getElementById('searchInput')) {
@@ -238,7 +258,28 @@
             }
         });
 
-        // 2. Read More Logic
+        // AUTO-FILL Size Chart based on Category
+        document.getElementById('aCat').addEventListener('change', function() {
+            fillTemplate(this.value);
+        });
+
+        function fillTemplate(cat) {
+            const textArea = document.getElementById('aSizeChartText');
+            if (cat === 'Apparel') {
+                textArea.value = "Размер,Бедра (см),Вес (кг),Рост (см)\n" +
+                                 "S,90-96,55-65,165-170\n" +
+                                 "M,96-102,65-75,170-175\n" +
+                                 "L,102-108,75-85,175-180\n" +
+                                 "XL,108-114,85-95,180-185\n" +
+                                 "2XL,114-120,95+,185+";
+            } else if (cat === 'Shoes') {
+                textArea.value = "Размер,Длина стопы (см)\n" +
+                                 "38,24.5\n39,25.0\n40,25.5\n41,26.5\n42,27.0\n43,27.5\n44,28.5\n45,29.5";
+            } else {
+                textArea.value = "";
+            }
+        }
+
         function toggleDesc() {
             const desc = document.getElementById('mDesc');
             const btn = document.getElementById('readMoreBtn');
@@ -252,10 +293,10 @@
         }
 
         function toggleSizeChart() {
-            const block = document.getElementById('sizeChartBlock');
+            const container = document.getElementById('sizeChartContainer');
             const arrow = document.getElementById('sizeChartArrow');
-            block.classList.toggle('hidden');
-            arrow.style.transform = block.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+            container.classList.toggle('hidden');
+            arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
         // --- API ---
@@ -264,11 +305,8 @@
                 const res = await fetch('/api/products');
                 products = await res.json();
                 renderGrid(products);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                document.getElementById('loader').classList.add('hidden');
-            }
+            } catch (e) { console.error(e); } 
+            finally { document.getElementById('loader').classList.add('hidden'); }
         }
 
         async function saveProduct(prod) {
@@ -283,10 +321,8 @@
                 });
                 await loadProducts();
                 renderAdminList();
-                document.getElementById('addForm').reset();
-                uploadedImages = [];
-                document.getElementById('photoPreview').innerHTML = '';
-                alert('Товар успешно добавлен!');
+                resetForm();
+                alert('Товар добавлен!');
             } catch (e) { alert('Ошибка сохранения'); }
             finally {
                 btn.innerHTML = originalText;
@@ -294,8 +330,14 @@
             }
         }
 
+        function resetForm() {
+            document.getElementById('addForm').reset();
+            uploadedImages = [];
+            renderPhotoPreview();
+        }
+
         async function deleteProduct(id) {
-            if(!confirm('Удалить товар навсегда?')) return;
+            if(!confirm('Удалить?')) return;
             await fetch(`/api/products/${id}`, { method: 'DELETE' });
             await loadProducts();
             renderAdminList();
@@ -322,7 +364,7 @@
         // --- RENDER ---
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
-            if(items.length === 0) { grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-10 text-sm">Товаров пока нет</div>'; return; }
+            if(items.length === 0) { grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-10 text-sm">Товаров нет</div>'; return; }
             
             grid.innerHTML = items.map(p => `
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onclick="openModal('${p.id}')">
@@ -346,26 +388,30 @@
             selectedSize = null;
             qty = 1;
             document.getElementById('mQty').innerText = 1;
-            document.getElementById('sizeChartBlock').classList.add('hidden');
+            
+            document.getElementById('sizeChartContainer').classList.add('hidden');
             document.getElementById('sizeChartArrow').style.transform = 'rotate(0deg)';
 
             document.getElementById('mName').innerText = currentProduct.name;
             document.getElementById('mPrice').innerText = formatMoney(currentProduct.price);
             document.getElementById('mCategory').innerText = translateCat(currentProduct.category);
             
-            // Description logic
             const descEl = document.getElementById('mDesc');
             const btnEl = document.getElementById('readMoreBtn');
             descEl.innerText = currentProduct.description || "Описание отсутствует.";
-            
-            // Reset to truncated state
             descEl.classList.add('line-clamp-3');
             btnEl.innerText = 'Читать далее';
             btnEl.style.display = descEl.innerText.length > 100 ? 'block' : 'none';
 
-            document.getElementById('sizeChartBlock').innerText = currentProduct.sizeChart || "Стандартная размерная сетка";
+            // GENERATE HTML TABLE FROM TEXT
+            const container = document.getElementById('sizeChartContainer');
+            if (currentProduct.sizeChart && currentProduct.sizeChart.includes(',')) {
+                container.innerHTML = generateTableFromCSV(currentProduct.sizeChart);
+            } else {
+                container.innerHTML = `<div class="text-xs text-gray-500">${currentProduct.sizeChart || 'Таблица не указана'}</div>`;
+            }
 
-            // Carousel: FIXED to use OBJECT-CONTAIN & RE-INIT
+            // Carousel
             const wrapper = document.getElementById('modalSwiperWrapper');
             wrapper.innerHTML = currentProduct.images.map(img => `
                 <div class="swiper-slide bg-white flex items-center justify-center p-2">
@@ -373,15 +419,11 @@
                 </div>
             `).join('');
             
-            // Destroy existing instance to prevent duplication/bugs
-            if (productSwiper) {
-                productSwiper.destroy(true, true);
-            }
-            
-            // Create new instance
+            if (productSwiper) productSwiper.destroy(true, true);
             productSwiper = new Swiper(".mySwiper", { 
-                initialSlide: 0, // Reset to first slide
-                spaceBetween: 10
+                initialSlide: 0, 
+                spaceBetween: 10,
+                pagination: { el: ".swiper-pagination", clickable: true }
             });
 
             // Sizes
@@ -393,12 +435,30 @@
                 return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg px-4 py-2 text-sm font-bold transition-all ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700 active:bg-gray-100'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
-            // Show Modal with Animation
             document.getElementById('modalBackdrop').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('productModal').classList.add('modal-open');
                 document.getElementById('productModal').classList.remove('translate-y-full');
             }, 10);
+        }
+
+        // CSV to HTML Table Converter
+        function generateTableFromCSV(text) {
+            const rows = text.trim().split('\n');
+            if (rows.length === 0) return '';
+            
+            let html = '<table class="size-table">';
+            rows.forEach((row, index) => {
+                const cols = row.split(',');
+                html += '<tr>';
+                cols.forEach(col => {
+                    if (index === 0) html += `<th>${col.trim()}</th>`;
+                    else html += `<td>${col.trim()}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            return html;
         }
 
         function closeModal() {
@@ -413,12 +473,9 @@
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
                 if(b.disabled) return;
-
-                // Сброс стилей (Reset styles)
                 b.classList.remove('bg-black', 'text-white', 'border-black');
                 b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
-
-                // Активный стиль (Active style)
+                
                 if(b.dataset.size === size) {
                     b.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
                     b.classList.add('bg-black', 'text-white', 'border-black');
@@ -433,12 +490,7 @@
 
         function addToCart() {
             if(!selectedSize) { tg.HapticFeedback.notificationOccurred('error'); alert('Выберите размер!'); return; }
-            cart.push({
-                ...currentProduct,
-                cartId: Date.now(),
-                selectedSize,
-                qty
-            });
+            cart.push({ ...currentProduct, cartId: Date.now(), selectedSize, qty });
             closeModal();
             updateCart();
             tg.HapticFeedback.notificationOccurred('success');
@@ -452,7 +504,6 @@
             badge.innerText = cart.length;
             badge.classList.toggle('opacity-0', cart.length===0);
             
-            // Header count inside cart
             const headerCount = document.getElementById('cartHeaderCount');
             if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.length})` : '';
 
@@ -480,7 +531,6 @@
                 `).join('');
             }
 
-            // Update TG MainButton
             if (total > 0) {
                 tg.MainButton.setText(`ЗАКАЗАТЬ: ${formatMoney(total)}`);
                 tg.MainButton.show();
@@ -494,18 +544,12 @@
             updateCart();
         }
 
-        // Send order via MainButton or inner button
         function sendOrder() {
             if(cart.length === 0) return;
             const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
             const data = {
                 total_price: total,
-                items: cart.map(i => ({
-                    name: i.name,
-                    price: i.price,
-                    qty: i.qty,
-                    size: i.selectedSize
-                }))
+                items: cart.map(i => ({ name: i.name, price: i.price, qty: i.qty, size: i.selectedSize }))
             };
             tg.sendData(JSON.stringify(data));
         }
@@ -518,26 +562,48 @@
             if(val === SECRET_CODE) {
                 openAdminPanel();
                 e.target.value = '';
-                e.target.blur(); // Close keyboard
+                e.target.blur();
             } else {
-                const lower = val.toLowerCase();
-                renderGrid(products.filter(p => p.name.toLowerCase().includes(lower)));
+                renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase())));
             }
         });
 
-        // Photo Upload Logic (Client Side Resize)
+        // 1. Photo Upload (Multiple + Reorder)
         document.getElementById('aPhotos').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files).slice(0, 10);
-            uploadedImages = [];
-            const preview = document.getElementById('photoPreview');
-            preview.innerHTML = '';
-
             for (let file of files) {
                 const base64 = await resizeImage(file);
                 uploadedImages.push(base64);
-                preview.innerHTML += `<img src="${base64}" class="h-16 w-16 rounded-lg object-cover border border-gray-200 shrink-0">`;
             }
+            renderPhotoPreview();
         });
+
+        function renderPhotoPreview() {
+            const container = document.getElementById('photoPreviewContainer');
+            container.innerHTML = uploadedImages.map((img, idx) => `
+                <div class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200">
+                    <img src="${img}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
+                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
+                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.movePhoto = (index, direction) => {
+            const newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < uploadedImages.length) {
+                [uploadedImages[index], uploadedImages[newIndex]] = [uploadedImages[newIndex], uploadedImages[index]];
+                renderPhotoPreview();
+            }
+        };
+
+        window.removePhoto = (index) => {
+            uploadedImages.splice(index, 1);
+            renderPhotoPreview();
+        };
 
         function resizeImage(file) {
             return new Promise((resolve) => {
@@ -552,7 +618,7 @@
                         canvas.width = maxWidth;
                         canvas.height = img.height * scale;
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // High compression
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
                     };
                     img.src = e.target.result;
                 };
@@ -580,7 +646,7 @@
                 images: uploadedImages,
                 sizes: sizes,
                 isAvailable: 1,
-                sizeChart: "Размерная сетка: " + translateCat(cat)
+                sizeChart: document.getElementById('aSizeChartText').value // Store text
             };
             saveProduct(prod);
         });
@@ -595,15 +661,14 @@
                             <div class="font-bold text-sm truncate">${p.name}</div>
                             <div class="text-xs text-gray-500">${formatMoney(p.price)}</div>
                         </div>
-                        <button onclick="deleteProduct('${p.id}')" class="text-red-500 p-2 bg-red-50 rounded-lg h-10 w-10 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        <div class="flex gap-2">
+                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-2 py-1 rounded text-[10px] font-bold border ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}">
+                                ${p.isAvailable ? 'ВКЛ' : 'ВЫКЛ'}
+                            </button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-red-500 p-2 bg-red-50 rounded-lg h-8 w-8 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        </div>
                     </div>
                     
-                    <div class="flex items-center gap-2 mb-3">
-                        <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="flex-1 py-1.5 rounded-lg text-xs font-bold border ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}">
-                            ${p.isAvailable ? 'В ПРОДАЖЕ' : 'СКРЫТ'}
-                        </button>
-                    </div>
-
                     <div class="flex flex-wrap gap-1.5 pt-2 border-t border-gray-100">
                         ${Object.keys(p.sizes).sort().map(s => `
                             <button onclick="toggleSizeStock('${p.id}', '${s}', ${p.sizes[s]})" 
@@ -642,7 +707,6 @@
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
         }
         
-        // Load on start
         document.addEventListener('DOMContentLoaded', loadProducts);
     </script>
 </body>
