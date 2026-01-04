@@ -392,7 +392,7 @@ async def process_finish(m: Message, state: FSMContext):
         "──────────────────\n"
         f"👤 <b>Заказчик:</b> {data['name']}\n"
         f"📞 <b>Телефон:</b> {data['phone']}\n"
-        f"🚚 <b>Доставка:</b> {addr_text}\n"
+        f"🚚 <b>Доставка:</b> {addr_text}, {maps_link if maps_link else 'Нет'}\n"
         "──────────────────\n"
         f"💰 <b>К ОПЛАТЕ: {data['total']:,.0f} UZS</b>\n\n"
         "<i>Менеджер свяжется с вами в ближайшее время.</i>"
