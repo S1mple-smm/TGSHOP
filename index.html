@@ -10,153 +10,188 @@
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <style>
-        body { font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .swiper-pagination-bullet-active { background-color: #000 !important; }
+        
+        /* Mobile specific adjustments */
+        input:focus { font-size: 16px; } /* Prevent zoom on iOS */
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen pb-24">
+<body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
 
-    <!-- Navigation -->
-    <nav class="sticky top-0 z-40 bg-white border-b shadow-sm px-4 py-3 flex justify-between items-center">
-        <div class="font-black text-xl tracking-tighter cursor-pointer" onclick="window.scrollTo(0,0)">
+    <!-- Sticky Navigation -->
+    <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all" id="navBar">
+        <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1" onclick="window.scrollTo(0,0)">
             KOS <span class="text-blue-600">SPORT</span>
         </div>
-        <div class="flex items-center gap-3">
-            <!-- Search / Secret Code Input -->
-            <div class="relative">
-                <input type="text" id="searchInput" placeholder="Поиск..." 
-                       class="bg-gray-100 border-none rounded-full py-1.5 px-4 text-sm w-32 focus:w-40 focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-                <i class="fas fa-search absolute right-3 top-2 text-gray-400 text-xs"></i>
+        
+        <div class="flex items-center gap-2">
+            <!-- Search Container -->
+            <div class="relative group">
+                <input type="text" id="searchInput" placeholder="Поиск" 
+                       class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
             </div>
             
-            <!-- Cart Icon -->
-            <button onclick="toggleCart()" class="relative p-1">
-                <i class="fas fa-shopping-bag text-2xl"></i>
-                <span id="cartBadge" class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full opacity-0 transition-opacity">0</span>
+            <!-- Cart Button -->
+            <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
+                <i class="fas fa-shopping-bag text-xl"></i>
+                <span id="cartBadge" class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
             </button>
         </div>
     </nav>
 
-    <!-- Content -->
-    <main class="max-w-md mx-auto p-4">
-        <!-- Categories -->
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
-            <button onclick="filter('All')" class="cat-btn bg-black text-white px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap">Все</button>
-            <button onclick="filter('Shoes')" class="cat-btn bg-white border text-gray-700 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap">Обувь</button>
-            <button onclick="filter('Apparel')" class="cat-btn bg-white border text-gray-700 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap">Форма</button>
-            <button onclick="filter('Equipment')" class="cat-btn bg-white border text-gray-700 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap">Экипировка</button>
+    <!-- Main Content -->
+    <main class="max-w-xl mx-auto p-4 w-full" id="mainContent">
+        <!-- Categories (Horizontal Scroll) -->
+        <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[60px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
+            <button onclick="filter('All')" class="cat-btn bg-black text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-sm">Все</button>
+            <button onclick="filter('Shoes')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Обувь</button>
+            <button onclick="filter('Apparel')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Форма</button>
+            <button onclick="filter('Equipment')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Инвентарь</button>
         </div>
 
-        <!-- Grid -->
-        <div id="loader" class="flex justify-center py-10"><i class="fas fa-circle-notch fa-spin text-2xl text-blue-600"></i></div>
-        <div id="productGrid" class="grid grid-cols-2 gap-3"></div>
+        <!-- Product Grid -->
+        <div id="loader" class="flex justify-center py-20"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i></div>
+        <div id="productGrid" class="grid grid-cols-2 gap-3 sm:gap-4"></div>
     </main>
 
-    <!-- PRODUCT MODAL -->
-    <div id="productModal" class="fixed inset-0 z-50 bg-white hidden flex flex-col overflow-y-auto">
-        <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-black/10 p-2 rounded-full"><i class="fas fa-times text-xl"></i></button>
+    <!-- PRODUCT MODAL (Full Screen on Mobile) -->
+    <div id="productModal" class="fixed inset-0 z-50 bg-white hidden flex flex-col overflow-y-auto animate-fade-in">
+        <!-- Close Btn -->
+        <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-white/80 backdrop-blur p-2 rounded-full shadow-sm active:scale-90 transition-transform">
+            <i class="fas fa-times text-xl text-gray-800"></i>
+        </button>
         
         <!-- Image Carousel -->
-        <div class="swiper mySwiper w-full h-[400px] bg-gray-100">
+        <div class="swiper mySwiper w-full h-[45vh] bg-gray-100 shrink-0">
             <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
             <div class="swiper-pagination"></div>
         </div>
 
-        <div class="p-5 flex-1 flex flex-col">
+        <div class="p-5 flex-1 flex flex-col pb-24">
             <div class="flex justify-between items-start mb-2">
-                <h1 id="mName" class="text-2xl font-black uppercase leading-tight"></h1>
-                <span id="mPrice" class="text-xl font-bold text-blue-600 whitespace-nowrap ml-4"></span>
+                <h1 id="mName" class="text-xl font-black uppercase leading-tight mr-2"></h1>
+                <div class="flex flex-col items-end">
+                    <span id="mPrice" class="text-lg font-bold text-blue-600 whitespace-nowrap"></span>
+                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">В наличии</span>
+                </div>
             </div>
-            <p id="mDesc" class="text-gray-500 text-sm mb-6 leading-relaxed"></p>
 
-            <!-- Size Chart Toggle -->
-            <div class="mb-2">
-                <button onclick="toggleSizeChart()" class="text-xs font-bold text-gray-500 underline uppercase flex items-center">
-                    <i class="fas fa-ruler mr-1"></i> Таблица размеров
+            <p class="text-xs text-gray-400 mb-4 uppercase font-bold tracking-widest" id="mCategory"></p>
+
+            <!-- Description with Read More -->
+            <div class="mb-6 relative">
+                <p id="mDesc" class="text-gray-600 text-sm leading-relaxed line-clamp-3 transition-all duration-300"></p>
+                <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden">Читать далее</button>
+            </div>
+
+            <!-- Size Chart -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center text-xs font-bold text-gray-700 uppercase">
+                    <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
+                    <i class="fas fa-chevron-down transition-transform" id="sizeChartArrow"></i>
                 </button>
-                <div id="sizeChartBlock" class="hidden mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600 whitespace-pre-wrap border"></div>
+                <div id="sizeChartBlock" class="hidden mt-3 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed border-t border-gray-200 pt-2"></div>
             </div>
 
-            <!-- Sizes -->
-            <div class="mb-6">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Выберите размер</label>
+            <!-- Size Selector -->
+            <div class="mb-8">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Выберите размер</label>
                 <div id="mSizes" class="flex flex-wrap gap-2"></div>
             </div>
+        </div>
 
-            <!-- Quantity & Add -->
-            <div class="mt-auto flex gap-4">
-                <div class="flex items-center border rounded-xl px-2">
-                    <button onclick="updateQty(-1)" class="w-8 h-full font-bold text-lg">-</button>
-                    <span id="mQty" class="w-8 text-center font-bold">1</span>
-                    <button onclick="updateQty(1)" class="w-8 h-full font-bold text-lg">+</button>
-                </div>
-                <button onclick="addToCart()" class="flex-1 bg-black text-white py-4 rounded-xl font-bold uppercase shadow-lg active:scale-95 transition-transform">
-                    В корзину
-                </button>
+        <!-- Bottom Action Bar (Fixed) -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50 safe-area-pb">
+            <div class="flex items-center border border-gray-200 rounded-xl h-12 bg-gray-50">
+                <button onclick="updateQty(-1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-l-xl text-lg font-bold text-gray-500">-</button>
+                <span id="mQty" class="w-8 text-center font-bold text-sm">1</span>
+                <button onclick="updateQty(1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-r-xl text-lg font-bold text-gray-500">+</button>
             </div>
+            <button onclick="addToCart()" class="flex-1 bg-black text-white h-12 rounded-xl font-bold uppercase text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                <span>В корзину</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
         </div>
     </div>
 
     <!-- CART SIDEBAR -->
-    <div id="cartOverlay" class="fixed inset-0 bg-black/50 z-50 hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
-    <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-50 transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+    <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-[60] hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
+    <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b flex justify-between items-center bg-gray-50">
-            <h2 class="text-xl font-black">КОРЗИНА</h2>
-            <button onclick="toggleCart()"><i class="fas fa-times text-xl"></i></button>
+            <h2 class="text-lg font-black uppercase tracking-tight">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1"></span></h2>
+            <button onclick="toggleCart()" class="p-2 bg-white rounded-full shadow-sm"><i class="fas fa-times text-lg"></i></button>
         </div>
         <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-        <div class="p-5 border-t bg-gray-50">
+        <div class="p-5 border-t bg-white pb-8 safe-area-pb">
             <div class="flex justify-between items-center mb-4">
-                <span class="text-gray-500 font-medium">Итого:</span>
-                <span id="cartTotal" class="text-2xl font-bold text-blue-600">0 UZS</span>
+                <span class="text-gray-500 font-medium text-sm">Итого к оплате</span>
+                <span id="cartTotal" class="text-xl font-black text-gray-900">0 UZS</span>
             </div>
-            <p class="text-[10px] text-center text-gray-400 mb-2">Нажмите кнопку внизу экрана Telegram для заказа</p>
+            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform">
+                Оформить заказ
+            </button>
         </div>
     </div>
 
     <!-- ADMIN PANEL -->
     <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4">
-        <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white">
-                <h2 class="font-bold"><i class="fas fa-database mr-2"></i> Админ Панель</h2>
-                <button onclick="closeAdmin()" class="text-sm bg-gray-700 px-3 py-1 rounded">Выйти</button>
+        <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white sticky top-0 z-10">
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-database"></i> Склад</h2>
+                <button onclick="closeAdmin()" class="text-xs bg-gray-700 px-3 py-1.5 rounded hover:bg-gray-600">Закрыть</button>
             </div>
             
             <div class="p-4 space-y-6">
                 <!-- Add Form -->
                 <form id="addForm" class="space-y-4">
-                    <h3 class="font-bold border-b pb-2">Добавить товар</h3>
-                    
-                    <input type="text" id="aName" placeholder="Название товара" required class="w-full border p-3 rounded-lg text-sm">
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" id="aPrice" placeholder="Цена (UZS)" required class="w-full border p-3 rounded-lg text-sm">
-                        <select id="aCat" class="w-full border p-3 rounded-lg text-sm" onchange="updateSizeChartHint()">
-                            <option value="Shoes">Обувь</option>
-                            <option value="Apparel">Форма</option>
-                            <option value="Equipment">Экипировка</option>
-                            <option value="Accessories">Аксессуары</option>
-                        </select>
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h3 class="font-bold text-blue-800 mb-3 text-sm uppercase">Новый товар</h3>
+                        
+                        <div class="space-y-3">
+                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="aPrice" placeholder="Цена" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none">
+                                <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none">
+                                    <option value="Shoes">Обувь</option>
+                                    <option value="Apparel">Форма</option>
+                                    <option value="Equipment">Экипировка</option>
+                                    <option value="Accessories">Аксессуары</option>
+                                </select>
+                            </div>
+
+                            <textarea id="aDesc" placeholder="Описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none"></textarea>
+
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
+                                <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                                <div class="text-gray-400 text-xs font-bold pointer-events-none">
+                                    <i class="fas fa-camera text-xl mb-1 block"></i>
+                                    Нажмите для загрузки фото (макс 10)
+                                </div>
+                            </div>
+                            <div id="photoPreview" class="flex gap-2 overflow-x-auto h-16 empty:hidden pb-1"></div>
+                        </div>
+
+                        <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm mt-4 shadow-lg active:scale-95 transition-transform">
+                            СОХРАНИТЬ В БАЗУ
+                        </button>
                     </div>
-
-                    <textarea id="aDesc" placeholder="Описание товара..." class="w-full border p-3 rounded-lg text-sm h-24"></textarea>
-
-                    <div>
-                        <label class="block text-xs font-bold mb-2">Фотографии (до 10 шт)</label>
-                        <input type="file" id="aPhotos" multiple accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <div id="photoPreview" class="flex gap-2 mt-2 overflow-x-auto h-16"></div>
-                    </div>
-
-                    <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i> СОХРАНИТЬ В БАЗУ
-                    </button>
                 </form>
 
                 <!-- Product List -->
                 <div>
-                    <h3 class="font-bold border-b pb-2 mb-4">Список товаров</h3>
-                    <div id="adminList" class="space-y-2"></div>
+                    <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1">Управление товарами</h3>
+                    <div id="adminList" class="space-y-3"></div>
                 </div>
             </div>
         </div>
@@ -175,14 +210,39 @@
         let currentProduct = null;
         let selectedSize = null;
         let qty = 1;
-        let uploadedImages = []; // Stores Base64 strings
+        let uploadedImages = [];
+        const SECRET_CODE = "4443";
 
-        // --- INIT ---
-        document.addEventListener('DOMContentLoaded', () => {
-            loadProducts();
-            tg.MainButton.textColor = '#FFFFFF';
-            tg.MainButton.color = '#3b82f6';
+        // --- UX ENHANCEMENTS ---
+        // 1. Close search on click outside
+        document.addEventListener('click', (e) => {
+            const searchContainer = document.getElementById('searchInput').parentElement;
+            if (!searchContainer.contains(e.target) && document.activeElement === document.getElementById('searchInput')) {
+                document.getElementById('searchInput').blur();
+            }
         });
+
+        // 2. Read More Logic
+        function toggleDesc() {
+            const desc = document.getElementById('mDesc');
+            const btn = document.getElementById('readMoreBtn');
+            if (desc.classList.contains('line-clamp-3')) {
+                desc.classList.remove('line-clamp-3');
+                btn.innerText = 'Свернуть';
+            } else {
+                desc.classList.add('line-clamp-3');
+                btn.innerText = 'Читать далее';
+                // Scroll back to top of modal content roughly
+                document.getElementById('productModal').scrollTo({top: 0, behavior: 'smooth'});
+            }
+        }
+
+        function toggleSizeChart() {
+            const block = document.getElementById('sizeChartBlock');
+            const arrow = document.getElementById('sizeChartArrow');
+            block.classList.toggle('hidden');
+            arrow.style.transform = block.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
 
         // --- API ---
         async function loadProducts() {
@@ -199,7 +259,8 @@
 
         async function saveProduct(prod) {
             const btn = document.getElementById('saveBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
             btn.disabled = true;
             try {
                 await fetch('/api/products', {
@@ -211,15 +272,16 @@
                 document.getElementById('addForm').reset();
                 uploadedImages = [];
                 document.getElementById('photoPreview').innerHTML = '';
+                alert('Товар успешно добавлен!');
             } catch (e) { alert('Ошибка сохранения'); }
             finally {
-                btn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> СОХРАНИТЬ В БАЗУ';
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
 
         async function deleteProduct(id) {
-            if(!confirm('Удалить?')) return;
+            if(!confirm('Удалить товар навсегда?')) return;
             await fetch(`/api/products/${id}`, { method: 'DELETE' });
             await loadProducts();
             renderAdminList();
@@ -243,21 +305,21 @@
             renderAdminList();
         }
 
-        // --- UI RENDER ---
+        // --- RENDER ---
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
-            if(items.length === 0) { grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-10">Товаров нет</div>'; return; }
+            if(items.length === 0) { grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-10 text-sm">Товаров пока нет</div>'; return; }
             
             grid.innerHTML = items.map(p => `
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer" onclick="openModal('${p.id}')">
-                    <div class="aspect-[4/5] relative bg-gray-100">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onclick="openModal('${p.id}')">
+                    <div class="aspect-[4/5] relative bg-gray-50">
                         <img src="${p.images[0]}" class="w-full h-full object-cover">
-                        ${!p.isAvailable ? '<div class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xs uppercase tracking-widest">Нет в наличии</div>' : ''}
+                        ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-gray-900 text-white px-3 py-1 text-[10px] font-bold uppercase rounded-full">Продано</span></div>' : ''}
                     </div>
                     <div class="p-3">
-                        <p class="text-xs text-gray-400 mb-1">${translateCat(p.category)}</p>
+                        <p class="text-[10px] text-gray-400 mb-1 uppercase font-bold tracking-wider truncate">${translateCat(p.category)}</p>
                         <h3 class="font-bold text-sm leading-tight mb-2 line-clamp-1">${p.name}</h3>
-                        <p class="text-blue-600 font-bold">${formatMoney(p.price)}</p>
+                        <p class="text-blue-600 font-bold text-sm">${formatMoney(p.price)}</p>
                     </div>
                 </div>
             `).join('');
@@ -267,21 +329,31 @@
             currentProduct = products.find(p => p.id === id);
             if(!currentProduct) return;
             
-            // Reset state
             selectedSize = null;
             qty = 1;
             document.getElementById('mQty').innerText = 1;
             document.getElementById('sizeChartBlock').classList.add('hidden');
+            document.getElementById('sizeChartArrow').style.transform = 'rotate(0deg)';
 
-            // Fill Content
             document.getElementById('mName').innerText = currentProduct.name;
             document.getElementById('mPrice').innerText = formatMoney(currentProduct.price);
-            document.getElementById('mDesc').innerText = currentProduct.description || "Описание отсутствует.";
+            document.getElementById('mCategory').innerText = translateCat(currentProduct.category);
+            
+            // Description logic
+            const descEl = document.getElementById('mDesc');
+            const btnEl = document.getElementById('readMoreBtn');
+            descEl.innerText = currentProduct.description || "Описание отсутствует.";
+            
+            // Reset to truncated state
+            descEl.classList.add('line-clamp-3');
+            btnEl.innerText = 'Читать далее';
+            btnEl.style.display = descEl.innerText.length > 100 ? 'block' : 'none';
+
             document.getElementById('sizeChartBlock').innerText = currentProduct.sizeChart || "Стандартная размерная сетка";
 
             // Carousel
             const wrapper = document.getElementById('modalSwiperWrapper');
-            wrapper.innerHTML = currentProduct.images.map(img => `<div class="swiper-slide"><img src="${img}" class="w-full h-full object-cover"></div>`).join('');
+            wrapper.innerHTML = currentProduct.images.map(img => `<div class="swiper-slide bg-white flex items-center justify-center"><img src="${img}" class="w-full h-full object-cover"></div>`).join('');
             new Swiper(".mySwiper", { pagination: { el: ".swiper-pagination", dynamicBullets: true } });
 
             // Sizes
@@ -290,7 +362,7 @@
             
             sizesContainer.innerHTML = sortedSizes.map(s => {
                 const avail = currentProduct.sizes[s];
-                return `<button onclick="selectSize('${s}')" class="size-btn border rounded px-3 py-2 text-sm font-bold transition-all ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-100' : 'hover:border-black'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
+                return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg px-4 py-2 text-sm font-bold transition-all ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700 active:bg-gray-100'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
             document.getElementById('productModal').classList.remove('hidden');
@@ -299,8 +371,8 @@
         function selectSize(size) {
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
-                b.classList.remove('bg-black', 'text-white');
-                if(b.dataset.size === size) b.classList.add('bg-black', 'text-white');
+                b.classList.remove('bg-black', 'text-white', 'border-black');
+                if(b.dataset.size === size) b.classList.add('bg-black', 'text-white', 'border-black');
             });
         }
 
@@ -310,7 +382,7 @@
         }
 
         function addToCart() {
-            if(!selectedSize) { alert('Выберите размер!'); return; }
+            if(!selectedSize) { tg.HapticFeedback.notificationOccurred('error'); alert('Выберите размер!'); return; }
             cart.push({
                 ...currentProduct,
                 cartId: Date.now(),
@@ -329,31 +401,42 @@
             
             badge.innerText = cart.length;
             badge.classList.toggle('opacity-0', cart.length===0);
+            
+            // Header count inside cart
+            const headerCount = document.getElementById('cartHeaderCount');
+            if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.length})` : '';
 
             const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
             totalEl.innerText = formatMoney(total);
 
-            cnt.innerHTML = cart.map((i, idx) => `
-                <div class="flex gap-4 border-b pb-3">
-                    <img src="${i.images[0]}" class="w-16 h-20 object-cover rounded">
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start">
-                            <h4 class="font-bold text-sm line-clamp-1">${i.name}</h4>
-                            <button onclick="removeFromCart(${idx})" class="text-gray-400"><i class="fas fa-times"></i></button>
-                        </div>
-                        <p class="text-xs text-gray-500 mb-2">Размер: ${i.selectedSize}</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-bold">${formatMoney(i.price * i.qty)}</span>
-                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">x${i.qty}</span>
+            if(cart.length === 0) {
+                cnt.innerHTML = '<div class="text-center text-gray-400 mt-20 text-sm">Корзина пуста</div>';
+            } else {
+                cnt.innerHTML = cart.map((i, idx) => `
+                    <div class="flex gap-3 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                        <img src="${i.images[0]}" class="w-16 h-16 object-cover rounded-lg bg-white">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-sm truncate mr-2">${i.name}</h4>
+                                <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1"><i class="fas fa-times"></i></button>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-1">Размер: <b>${i.selectedSize}</b></p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-600 font-bold text-sm">${formatMoney(i.price * i.qty)}</span>
+                                <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-gray-600 font-bold">x${i.qty}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
 
-            if(total > 0) {
+            // Update TG MainButton
+            if (total > 0) {
                 tg.MainButton.setText(`ЗАКАЗАТЬ: ${formatMoney(total)}`);
                 tg.MainButton.show();
-            } else tg.MainButton.hide();
+            } else {
+                tg.MainButton.hide();
+            }
         }
 
         function removeFromCart(idx) {
@@ -361,9 +444,11 @@
             updateCart();
         }
 
-        tg.onEvent('mainButtonClicked', () => {
+        // Send order via MainButton or inner button
+        function sendOrder() {
+            if(cart.length === 0) return;
             const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            tg.sendData(JSON.stringify({
+            const data = {
                 total_price: total,
                 items: cart.map(i => ({
                     name: i.name,
@@ -371,32 +456,36 @@
                     qty: i.qty,
                     size: i.selectedSize
                 }))
-            }));
-        });
+            };
+            tg.sendData(JSON.stringify(data));
+        }
+        
+        tg.onEvent('mainButtonClicked', sendOrder);
 
-        // --- ADMIN LOGIC ---
-        // Secret Code Listener
+        // --- ADMIN ---
         document.getElementById('searchInput').addEventListener('input', (e) => {
-            if(e.target.value === '4443') {
-                document.getElementById('adminModal').classList.remove('hidden');
-                renderAdminList();
+            const val = e.target.value;
+            if(val === SECRET_CODE) {
+                openAdminPanel();
                 e.target.value = '';
+                e.target.blur(); // Close keyboard
             } else {
-                const val = e.target.value.toLowerCase();
-                renderGrid(products.filter(p => p.name.toLowerCase().includes(val)));
+                const lower = val.toLowerCase();
+                renderGrid(products.filter(p => p.name.toLowerCase().includes(lower)));
             }
         });
 
-        // Image Compressor & Reader
+        // Photo Upload Logic (Client Side Resize)
         document.getElementById('aPhotos').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files).slice(0, 10); // Max 10
+            const files = Array.from(e.target.files).slice(0, 10);
             uploadedImages = [];
-            document.getElementById('photoPreview').innerHTML = '';
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
 
             for (let file of files) {
                 const base64 = await resizeImage(file);
                 uploadedImages.push(base64);
-                document.getElementById('photoPreview').innerHTML += `<img src="${base64}" class="h-full w-auto rounded border">`;
+                preview.innerHTML += `<img src="${base64}" class="h-16 w-16 rounded-lg object-cover border border-gray-200 shrink-0">`;
             }
         });
 
@@ -408,12 +497,12 @@
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        const maxWidth = 800; // Resize to 800px width max
+                        const maxWidth = 800;
                         const scale = maxWidth / img.width;
                         canvas.width = maxWidth;
                         canvas.height = img.height * scale;
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to 70% quality
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // High compression
                     };
                     img.src = e.target.result;
                 };
@@ -421,15 +510,12 @@
             });
         }
 
-        // Add Product Form
         document.getElementById('addForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            if(uploadedImages.length === 0) { alert('Добавьте хотя бы 1 фото'); return; }
+            if(uploadedImages.length === 0) { alert('Нужно хотя бы 1 фото'); return; }
 
             const cat = document.getElementById('aCat').value;
             let sizes = {};
-            
-            // Auto-generate size keys based on category
             if(cat === 'Shoes') { for(let i=35; i<=45; i++) sizes[i] = true; }
             else if(cat === 'Apparel') { ['S','M','L','XL','2XL'].forEach(s => sizes[s]=true); }
             else if(cat === 'Equipment') { [10,15,20,22,28,30].forEach(s => sizes[s]=true); }
@@ -444,7 +530,7 @@
                 images: uploadedImages,
                 sizes: sizes,
                 isAvailable: 1,
-                sizeChart: "Размерная сетка для " + cat
+                sizeChart: "Размерная сетка: " + translateCat(cat)
             };
             saveProduct(prod);
         });
@@ -452,27 +538,26 @@
         function renderAdminList() {
             const list = document.getElementById('adminList');
             list.innerHTML = products.map(p => `
-                <div class="bg-gray-50 p-3 rounded border text-sm mb-2">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-2">
-                            <img src="${p.images[0]}" class="w-10 h-10 object-cover rounded">
-                            <div>
-                                <div class="font-bold">${p.name}</div>
-                                <div class="text-xs text-gray-500">${p.price} UZS</div>
-                            </div>
+                <div class="bg-white border border-gray-200 p-3 rounded-xl mb-3 shadow-sm">
+                    <div class="flex gap-3 mb-3">
+                        <img src="${p.images[0]}" class="w-12 h-12 object-cover rounded-lg bg-gray-100">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm truncate">${p.name}</div>
+                            <div class="text-xs text-gray-500">${formatMoney(p.price)}</div>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-2 py-1 rounded border text-xs ${p.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                                ${p.isAvailable ? 'Склад: ВКЛ' : 'Склад: ВЫКЛ'}
-                            </button>
-                            <button onclick="deleteProduct('${p.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
-                        </div>
+                        <button onclick="deleteProduct('${p.id}')" class="text-red-500 p-2 bg-red-50 rounded-lg h-10 w-10 flex items-center justify-center"><i class="fas fa-trash"></i></button>
                     </div>
-                    <!-- Size Toggles -->
-                    <div class="flex flex-wrap gap-1 mt-2">
+                    
+                    <div class="flex items-center gap-2 mb-3">
+                        <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="flex-1 py-1.5 rounded-lg text-xs font-bold border ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}">
+                            ${p.isAvailable ? 'В ПРОДАЖЕ' : 'СКРЫТ'}
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1.5 pt-2 border-t border-gray-100">
                         ${Object.keys(p.sizes).sort().map(s => `
                             <button onclick="toggleSizeStock('${p.id}', '${s}', ${p.sizes[s]})" 
-                                class="px-2 py-0.5 text-[10px] border rounded ${p.sizes[s] ? 'bg-white border-gray-300' : 'bg-red-50 text-red-400 line-through border-red-100'}">
+                                class="px-2 py-1 text-[10px] font-bold border rounded transition-colors ${p.sizes[s] ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-400 border-gray-200 line-through'}">
                                 ${s}
                             </button>
                         `).join('')}
@@ -486,8 +571,8 @@
         function translateCat(c) { const map={'Shoes':'Обувь','Apparel':'Форма','Equipment':'Экипировка','Accessories':'Аксессуары'}; return map[c]||c; }
         function closeModal() { document.getElementById('productModal').classList.add('hidden'); }
         function toggleCart() { document.getElementById('cartOverlay').classList.toggle('hidden'); document.getElementById('cartPanel').classList.toggle('translate-x-full'); }
+        function openAdminPanel() { renderAdminList(); document.getElementById('adminModal').classList.remove('hidden'); }
         function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
-        function toggleSizeChart() { document.getElementById('sizeChartBlock').classList.toggle('hidden'); }
         function sortSizes(keys) {
             const order = ['S','M','L','XL','2XL'];
             return keys.sort((a,b) => {
@@ -498,15 +583,18 @@
         }
         function filter(cat) { 
             document.querySelectorAll('.cat-btn').forEach(b => {
-                b.classList.remove('bg-black','text-white'); 
-                b.classList.add('bg-white','text-gray-700'); 
-                if(b.innerText.includes(cat === 'All' ? 'Все' : (cat==='Shoes'?'Обувь':(cat==='Apparel'?'Форма':'Экипировка')))) {
-                    b.classList.add('bg-black','text-white');
-                    b.classList.remove('bg-white','text-gray-700');
+                b.classList.remove('bg-black','text-white', 'shadow-sm'); 
+                b.classList.add('bg-white','text-gray-700', 'border'); 
+                if(b.innerText.includes(cat === 'All' ? 'Все' : (cat==='Shoes'?'Обувь':(cat==='Apparel'?'Форма':(cat==='Equipment'?'Инвентарь':''))))) {
+                    b.classList.add('bg-black','text-white', 'shadow-sm');
+                    b.classList.remove('bg-white','text-gray-700', 'border');
                 }
             });
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
         }
+        
+        // Load on start
+        document.addEventListener('DOMContentLoaded', loadProducts);
     </script>
 </body>
 </html>
