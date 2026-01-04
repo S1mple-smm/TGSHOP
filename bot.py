@@ -19,7 +19,7 @@ load_dotenv()
 # --- 1. НАСТРОЙКИ ---
 class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
-    ADMIN_ID = os.getenv("ADMIN_ID") # Ваш ID администратора
+    ADMIN_ID = os.getenv("ADMIN_ID")
     DATABASE_URL = os.getenv("DATABASE_URL")
     PORT = int(os.getenv("PORT", 8000))
     BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
@@ -31,12 +31,33 @@ log = logging.getLogger("bot")
 # --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
 class DBManager:
     def __init__(self):
+        # ДИАГНОСТИКА: Почему не работает Postgres?
+        self.check_connection_status()
+        
         self.is_pg = bool(settings.DATABASE_URL and psycopg2)
-        if self.is_pg:
-            log.info("✅ Используем PostgreSQL (Облако)")
-        else:
-            log.info("⚠️ Используем SQLite (Локально)")
         self.init_db()
+
+    def check_connection_status(self):
+        print("------------------------------------------------")
+        if not settings.DATABASE_URL:
+            log.warning("❌ [ОШИБКА] Переменная DATABASE_URL не найдена в настройках Render!")
+            log.info("👉 Зайдите в Render -> Environment и добавьте DATABASE_URL")
+        else:
+            # Скрываем пароль в логах, показываем только начало
+            masked_url = settings.DATABASE_URL[:20] + "..." if settings.DATABASE_URL else "None"
+            log.info(f"✅ Переменная DATABASE_URL найдена: {masked_url}")
+
+        if not psycopg2:
+            log.warning("❌ [ОШИБКА] Библиотека 'psycopg2' не установлена!")
+            log.info("👉 Проверьте файл requirements.txt, там должно быть: psycopg2-binary")
+        else:
+            log.info("✅ Библиотека psycopg2 успешно загружена")
+        
+        if settings.DATABASE_URL and psycopg2:
+            log.info("🚀 ВСЕ ОТЛИЧНО! Подключаемся к PostgreSQL (Neon)...")
+        else:
+            log.warning("⚠️ ПЕРЕКЛЮЧЕНИЕ НА SQLite (Файловая база). Данные будут исчезать!")
+        print("------------------------------------------------")
 
     def get_conn(self):
         if self.is_pg:
@@ -251,7 +272,7 @@ class OrderFlow(StatesGroup):
     contact = State()
     address = State()
 
-# Клавиатуры
+# КЛАВИАТУРЫ
 def main_kb():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
@@ -269,24 +290,23 @@ def location_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📍 Отправить геолокацию", request_location=True)],
-            [KeyboardButton(text="✍️ Ввести адрес вручную")]
+            [KeyboardButton(text="⏩ Пропустить (введу вручную)")]
         ],
         resize_keyboard=True, one_time_keyboard=True
     )
 
-# Хендлеры
+# ХЕНДЛЕРЫ
 async def cmd_start(m: Message):
     await m.answer(
         f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\n"
         "Добро пожаловать в KOS Sport.\n"
-        "Здесь вы можете заказать лучшую экипировку.\n\n"
-        "👇 <b>Нажмите кнопку, чтобы открыть каталог:</b>", 
+        "Нажмите кнопку ниже, чтобы открыть каталог 👇", 
         reply_markup=main_kb(),
         parse_mode=ParseMode.HTML
     )
 
 async def cmd_help(m: Message):
-    await m.answer("Доступные команды:\n/start - Перезапустить бота\n/orders - Мои заказы")
+    await m.answer("Команды:\n/start - Меню\n/orders - История заказов")
 
 async def cmd_orders(m: Message):
     orders = db.list_user_orders(m.from_user.id)
@@ -295,10 +315,10 @@ async def cmd_orders(m: Message):
         return
     text = "📂 <b>История заказов:</b>\n\n"
     for o in orders:
-        text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 Сумма: {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
+        text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
 
-# Шаг 1: Прием данных из WebApp
+# ШАГ 1: Данные из WebApp
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -308,21 +328,21 @@ async def on_webapp_data(m: Message, state: FSMContext):
         await state.update_data(items=items, total=total)
         await state.set_state(OrderFlow.contact)
         
-        # Красивый чек предварительного просмотра
-        text = "🛍 <b>Ваша корзина:</b>\n\n"
+        # Чек предварительного просмотра
+        text = "📝 <b>Ваша корзина:</b>\n\n"
         for i in items:
             size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
             text += f"▪️ {i['name']} {size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
         
-        text += f"\n💳 <b>Итого к оплате: {total:,.0f} UZS</b>"
-        text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона для связи."
+        text += f"\n💳 <b>Итого: {total:,.0f} UZS</b>"
+        text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона."
         
         await m.answer(text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
     except Exception as e:
         log.error(e)
-        await m.answer("❌ Ошибка получения данных. Попробуйте снова.")
+        await m.answer("❌ Ошибка данных. Попробуйте снова.")
 
-# Шаг 2: Контакт
+# ШАГ 2: Контакт
 async def process_contact(m: Message, state: FSMContext):
     phone = m.contact.phone_number if m.contact else m.text
     await state.update_data(phone=phone, name=m.from_user.full_name)
@@ -330,18 +350,18 @@ async def process_contact(m: Message, state: FSMContext):
     
     await m.answer(
         "📍 <b>Шаг 2/2:</b> Куда доставить заказ?\n\n"
-        "Нажмите кнопку <b>«Отправить геолокацию»</b> для точной доставки или напишите адрес текстом.", 
+        "Нажмите <b>«Отправить геолокацию»</b> или напишите адрес текстом.", 
         reply_markup=location_kb(),
         parse_mode=ParseMode.HTML
     )
 
-# Шаг 3: Локация и Финал
+# ШАГ 3: Локация и Финал
 async def process_finish(m: Message, state: FSMContext):
     data = await state.get_data()
     
     # Обработка адреса
     if m.location:
-        addr_text = "📍 Геолокация (см. карту у админа)"
+        addr_text = "📍 Геолокация (см. карту)"
         lat = m.location.latitude
         lon = m.location.longitude
         maps_link = f"https://maps.google.com/?q={lat},{lon}"
@@ -360,24 +380,24 @@ async def process_finish(m: Message, state: FSMContext):
         "──────────────────\n"
         f"👤 <b>Заказчик:</b> {data['name']}\n"
         f"📞 <b>Телефон:</b> {data['phone']}\n"
-        f"🚚 <b>Адрес:</b> {addr_text}\n"
+        f"🚚 <b>Доставка:</b> {addr_text}\n"
         "──────────────────\n"
-        f"💰 <b>ИТОГО: {data['total']:,.0f} UZS</b>\n\n"
-        "<i>Менеджер свяжется с вами в ближайшее время для подтверждения.</i>"
+        f"💰 <b>К ОПЛАТЕ: {data['total']:,.0f} UZS</b>\n\n"
+        "<i>Менеджер свяжется с вами в ближайшее время.</i>"
     )
     
     await m.answer(receipt, reply_markup=main_kb(), parse_mode=ParseMode.HTML)
     
-    # Уведомление АДМИНУ
+    # УВЕДОМЛЕНИЕ АДМИНУ
     if settings.ADMIN_ID:
         try:
             admin_msg = (
                 f"🆕 <b>НОВЫЙ ЗАКАЗ №{order_id}</b>\n"
                 f"👤 Клиент: <a href='tg://user?id={m.from_user.id}'>{data['name']}</a>\n"
-                f"📞 Телефон: <code>{data['phone']}</code>\n"
+                f"📞 Тел: <code>{data['phone']}</code>\n"
                 f"📍 Адрес: {addr_text}\n"
                 f"🔗 Карты: {maps_link if maps_link else 'Нет'}\n\n"
-                "📦 <b>Состав заказа:</b>\n"
+                "📦 <b>Состав:</b>\n"
             )
             
             for i in data['items']:
@@ -388,7 +408,7 @@ async def process_finish(m: Message, state: FSMContext):
 
             await m.bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
             
-            # Если была геолокация, отправляем админу точку на карте
+            # ВАЖНО: Отправляем точку на карте отдельно
             if lat and lon:
                 await m.bot.send_location(settings.ADMIN_ID, latitude=lat, longitude=lon)
                 
@@ -399,7 +419,7 @@ async def process_finish(m: Message, state: FSMContext):
 
 async def main():
     # Запуск сервера
-    app = web.Application(client_max_size=1024**2*20) # Лимит 20MB на загрузку фото
+    app = web.Application(client_max_size=1024**2*20) # Лимит 20MB
     app.router.add_get("/", serve_index)
     app.router.add_get("/api/products", api_get_products)
     app.router.add_post("/api/products", api_save_product)
@@ -423,10 +443,8 @@ async def main():
     dp.message.register(process_contact, OrderFlow.contact)
     dp.message.register(process_finish, OrderFlow.address) # Принимает и текст, и локацию
     
-    # УДАЛЯЕМ WEBHOOK ПЕРЕД POLLLING (Чтобы избежать конфликта getUpdates)
+    # УДАЛЯЕМ ВЕБХУК (Фикс конфликта)
     await bot.delete_webhook(drop_pending_updates=True)
-    
-    # Запускаем polling, игнорируя старые апдейты
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":
