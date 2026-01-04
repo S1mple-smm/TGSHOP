@@ -23,6 +23,10 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+        
+        /* Smooth modal animation */
+        #productModal { transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1); }
+        .modal-open { transform: translateY(0) !important; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
@@ -64,54 +68,66 @@
         <div id="productGrid" class="grid grid-cols-2 gap-3 sm:gap-4"></div>
     </main>
 
-    <!-- PRODUCT MODAL (Full Screen on Mobile) -->
-    <div id="productModal" class="fixed inset-0 z-50 bg-white hidden flex flex-col overflow-y-auto animate-fade-in">
+    <!-- PRODUCT MODAL BACKDROP -->
+    <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+
+    <!-- PRODUCT MODAL (Bottom Sheet Style) -->
+    <div id="productModal" class="fixed bottom-0 left-0 right-0 z-[55] bg-white rounded-t-[30px] h-[75vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full">
+        
+        <!-- Handle for dragging feel -->
+        <div class="w-full flex justify-center pt-3 pb-1" onclick="closeModal()">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
+
         <!-- Close Btn -->
-        <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-white/80 backdrop-blur p-2 rounded-full shadow-sm active:scale-90 transition-transform">
-            <i class="fas fa-times text-xl text-gray-800"></i>
+        <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-gray-100 p-2 rounded-full shadow-sm active:scale-90 transition-transform">
+            <i class="fas fa-times text-gray-500"></i>
         </button>
         
-        <!-- Image Carousel -->
-        <div class="swiper mySwiper w-full h-[45vh] bg-gray-100 shrink-0">
-            <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
-            <div class="swiper-pagination"></div>
-        </div>
+        <!-- Scrollable Content -->
+        <div class="overflow-y-auto flex-1 pb-24">
+            <!-- Image Carousel (Smaller height, contain fit) -->
+            <div class="swiper mySwiper w-full h-[35vh] bg-white mt-2">
+                <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
+                <div class="swiper-pagination"></div>
+            </div>
 
-        <div class="p-5 flex-1 flex flex-col pb-24">
-            <div class="flex justify-between items-start mb-2">
-                <h1 id="mName" class="text-xl font-black uppercase leading-tight mr-2"></h1>
-                <div class="flex flex-col items-end">
-                    <span id="mPrice" class="text-lg font-bold text-blue-600 whitespace-nowrap"></span>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">В наличии</span>
+            <div class="p-5 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <h1 id="mName" class="text-xl font-black uppercase leading-tight mr-2"></h1>
+                    <div class="flex flex-col items-end shrink-0">
+                        <span id="mPrice" class="text-lg font-bold text-blue-600 whitespace-nowrap"></span>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">В наличии</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-400 mb-4 uppercase font-bold tracking-widest" id="mCategory"></p>
+
+                <!-- Description with Read More -->
+                <div class="mb-6 relative">
+                    <p id="mDesc" class="text-gray-600 text-sm leading-relaxed line-clamp-3 transition-all duration-300"></p>
+                    <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden">Читать далее</button>
+                </div>
+
+                <!-- Size Chart -->
+                <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center text-xs font-bold text-gray-700 uppercase">
+                        <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
+                        <i class="fas fa-chevron-down transition-transform" id="sizeChartArrow"></i>
+                    </button>
+                    <div id="sizeChartBlock" class="hidden mt-3 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed border-t border-gray-200 pt-2"></div>
+                </div>
+
+                <!-- Size Selector -->
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Выберите размер</label>
+                    <div id="mSizes" class="flex flex-wrap gap-2"></div>
                 </div>
             </div>
-
-            <p class="text-xs text-gray-400 mb-4 uppercase font-bold tracking-widest" id="mCategory"></p>
-
-            <!-- Description with Read More -->
-            <div class="mb-6 relative">
-                <p id="mDesc" class="text-gray-600 text-sm leading-relaxed line-clamp-3 transition-all duration-300"></p>
-                <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden">Читать далее</button>
-            </div>
-
-            <!-- Size Chart -->
-            <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center text-xs font-bold text-gray-700 uppercase">
-                    <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
-                    <i class="fas fa-chevron-down transition-transform" id="sizeChartArrow"></i>
-                </button>
-                <div id="sizeChartBlock" class="hidden mt-3 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed border-t border-gray-200 pt-2"></div>
-            </div>
-
-            <!-- Size Selector -->
-            <div class="mb-8">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Выберите размер</label>
-                <div id="mSizes" class="flex flex-wrap gap-2"></div>
-            </div>
         </div>
 
-        <!-- Bottom Action Bar (Fixed) -->
-        <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50 safe-area-pb">
+        <!-- Bottom Action Bar (Fixed inside modal) -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50">
             <div class="flex items-center border border-gray-200 rounded-xl h-12 bg-gray-50">
                 <button onclick="updateQty(-1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-l-xl text-lg font-bold text-gray-500">-</button>
                 <span id="mQty" class="w-8 text-center font-bold text-sm">1</span>
@@ -232,8 +248,6 @@
             } else {
                 desc.classList.add('line-clamp-3');
                 btn.innerText = 'Читать далее';
-                // Scroll back to top of modal content roughly
-                document.getElementById('productModal').scrollTo({top: 0, behavior: 'smooth'});
             }
         }
 
@@ -351,9 +365,13 @@
 
             document.getElementById('sizeChartBlock').innerText = currentProduct.sizeChart || "Стандартная размерная сетка";
 
-            // Carousel
+            // Carousel: FIXED to use OBJECT-CONTAIN
             const wrapper = document.getElementById('modalSwiperWrapper');
-            wrapper.innerHTML = currentProduct.images.map(img => `<div class="swiper-slide bg-white flex items-center justify-center"><img src="${img}" class="w-full h-full object-cover"></div>`).join('');
+            wrapper.innerHTML = currentProduct.images.map(img => `
+                <div class="swiper-slide bg-white flex items-center justify-center p-2">
+                    <img src="${img}" class="w-full h-full object-contain">
+                </div>
+            `).join('');
             new Swiper(".mySwiper", { pagination: { el: ".swiper-pagination", dynamicBullets: true } });
 
             // Sizes
@@ -365,7 +383,20 @@
                 return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg px-4 py-2 text-sm font-bold transition-all ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700 active:bg-gray-100'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
-            document.getElementById('productModal').classList.remove('hidden');
+            // Show Modal with Animation
+            document.getElementById('modalBackdrop').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('productModal').classList.add('modal-open');
+                document.getElementById('productModal').classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('modal-open');
+            document.getElementById('productModal').classList.add('translate-y-full');
+            setTimeout(() => {
+                document.getElementById('modalBackdrop').classList.add('hidden');
+            }, 300);
         }
 
         function selectSize(size) {
@@ -569,7 +600,6 @@
         // Helpers
         function formatMoney(n) { return new Intl.NumberFormat('ru-RU').format(n) + ' UZS'; }
         function translateCat(c) { const map={'Shoes':'Обувь','Apparel':'Форма','Equipment':'Экипировка','Accessories':'Аксессуары'}; return map[c]||c; }
-        function closeModal() { document.getElementById('productModal').classList.add('hidden'); }
         function toggleCart() { document.getElementById('cartOverlay').classList.toggle('hidden'); document.getElementById('cartPanel').classList.toggle('translate-x-full'); }
         function openAdminPanel() { renderAdminList(); document.getElementById('adminModal').classList.remove('hidden'); }
         function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
