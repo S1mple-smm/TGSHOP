@@ -12,7 +12,6 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .swiper-pagination-bullet-active { background-color: #000 !important; }
         
         /* Mobile specific adjustments */
         input:focus { font-size: 16px; } /* Prevent zoom on iOS */
@@ -89,7 +88,7 @@
             <!-- Image Carousel (Smaller height, contain fit) -->
             <div class="swiper mySwiper w-full h-[35vh] bg-white mt-2">
                 <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
-                <div class="swiper-pagination"></div>
+                <!-- Pagination removed -->
             </div>
 
             <div class="p-5 flex flex-col">
@@ -227,6 +226,7 @@
         let selectedSize = null;
         let qty = 1;
         let uploadedImages = [];
+        let productSwiper = null; // Store swiper instance
         const SECRET_CODE = "4443";
 
         // --- UX ENHANCEMENTS ---
@@ -365,14 +365,24 @@
 
             document.getElementById('sizeChartBlock').innerText = currentProduct.sizeChart || "Стандартная размерная сетка";
 
-            // Carousel: FIXED to use OBJECT-CONTAIN
+            // Carousel: FIXED to use OBJECT-CONTAIN & RE-INIT
             const wrapper = document.getElementById('modalSwiperWrapper');
             wrapper.innerHTML = currentProduct.images.map(img => `
                 <div class="swiper-slide bg-white flex items-center justify-center p-2">
                     <img src="${img}" class="w-full h-full object-contain">
                 </div>
             `).join('');
-            new Swiper(".mySwiper", { pagination: { el: ".swiper-pagination", dynamicBullets: true } });
+            
+            // Destroy existing instance to prevent duplication/bugs
+            if (productSwiper) {
+                productSwiper.destroy(true, true);
+            }
+            
+            // Create new instance
+            productSwiper = new Swiper(".mySwiper", { 
+                initialSlide: 0, // Reset to first slide
+                spaceBetween: 10
+            });
 
             // Sizes
             const sizesContainer = document.getElementById('mSizes');
@@ -402,8 +412,17 @@
         function selectSize(size) {
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
+                if(b.disabled) return;
+
+                // Сброс стилей (Reset styles)
                 b.classList.remove('bg-black', 'text-white', 'border-black');
-                if(b.dataset.size === size) b.classList.add('bg-black', 'text-white', 'border-black');
+                b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+
+                // Активный стиль (Active style)
+                if(b.dataset.size === size) {
+                    b.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+                    b.classList.add('bg-black', 'text-white', 'border-black');
+                }
             });
         }
 
