@@ -1,18 +1,19 @@
-import asyncio
-import json
-import logging
 import sys
 import os
 
-# Fix paths for hosting environments (Render / VPS)
+# 1. THIS PATTERN MUST COME ABSOLUTELY FIRST
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 if os.path.dirname(current_dir) not in sys.path:
     sys.path.append(os.path.dirname(current_dir))
 
-# Now these imports will find 'app' cleanly anywhere
+# 2. ONLY NOW YOU CAN IMPORT RAW MODULES
+import asyncio
+import json
+import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
+# ... rest of your code ...
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
