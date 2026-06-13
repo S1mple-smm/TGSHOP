@@ -1,28 +1,28 @@
-import asyncio, json, logging
+import asyncio
+import json
+import logging
 import sys
 import os
 
-# Фикс путей
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Fix paths for hosting environments (Render / VPS)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+if os.path.dirname(current_dir) not in sys.path:
+    sys.path.append(os.path.dirname(current_dir))
 
+# Now these imports will find 'app' cleanly anywhere
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage # Хранилище для состояний
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
 
 from app.config import settings
 from app.server import create_web_app
-
-try:
-    from app.orders_db import add_order, list_user_orders
-except ImportError:
-    # Заглушки, если база данных не подключена (чтобы бот не падал)
-    def add_order(**k): return 101
-    def list_user_orders(*a): return []
+from app.orders_db import add_order, list_user_orders
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(message)s")
 log = logging.getLogger("bot")
