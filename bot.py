@@ -21,9 +21,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
 
-from app.config import settings
-from app.server import create_web_app
-from app.orders_db import add_order, list_user_orders
+from config import settings
+from server import create_web_app
+from orders_db import add_order, list_user_orders
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(message)s")
 log = logging.getLogger("bot")
