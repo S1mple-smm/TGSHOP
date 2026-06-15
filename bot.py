@@ -276,6 +276,9 @@ def location_kb():
 async def cmd_start(m: Message):
     await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в KOS Sport.\nНажмите кнопку ниже, чтобы открыть каталог 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
 
+async def cmd_help(m: Message):
+    await m.answer("Команды:\n/start - Меню\n/orders - История заказов")
+
 async def cmd_orders(m: Message):
     orders = db.list_user_orders(m.from_user.id)
     if not orders:
