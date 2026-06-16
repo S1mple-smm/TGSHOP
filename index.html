@@ -30,7 +30,7 @@
         .size-table { 
             width: 100%; 
             border-collapse: collapse; 
-            font-size: 11px; 
+            font-size: 12px; 
             margin-top: 5px; 
             background: white;
         }
@@ -52,25 +52,27 @@
 
     <!-- Sticky Navigation -->
     <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all" id="navBar">
-        <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1" onclick="window.scrollTo(0,0)">
-            KOS <span class="text-blue-600">SPORT</span>
-        </div>
-        
-        <div class="flex items-center gap-2">
-            <div class="relative group">
-                <input type="text" id="searchInput" placeholder="Поиск" 
-                       class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-                <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
+        <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1 max-w-6xl mx-auto w-full" onclick="window.scrollTo(0,0)">
+            <div class="flex-1">
+                KOS <span class="text-blue-600">SPORT</span>
             </div>
-            <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
-                <i class="fas fa-shopping-bag text-xl"></i>
-                <span id="cartBadge" class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
-            </button>
+            
+            <div class="flex items-center gap-2 justify-end">
+                <div class="relative group">
+                    <input type="text" id="searchInput" placeholder="Поиск" 
+                           class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 sm:focus:w-64 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                    <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+                <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
+                    <i class="fas fa-shopping-bag text-xl"></i>
+                    <span id="cartBadge" class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
+                </button>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-xl mx-auto p-4 w-full" id="mainContent">
+    <!-- Main Content (Адаптивный контейнер) -->
+    <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[60px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
             <button onclick="filter('All')" class="cat-btn bg-black text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-sm">Все</button>
             <button onclick="filter('Shoes')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Обувь</button>
@@ -79,23 +81,24 @@
         </div>
 
         <div id="loader" class="flex justify-center py-20"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i></div>
-        <div id="productGrid" class="grid grid-cols-2 gap-3 sm:gap-4"></div>
+        <!-- Адаптивная сетка товаров -->
+        <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"></div>
     </main>
 
     <!-- PRODUCT MODAL BACKDROP -->
     <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
 
-    <!-- PRODUCT MODAL -->
-    <div id="productModal" class="fixed bottom-0 left-0 right-0 z-[55] bg-white rounded-t-[30px] h-[85vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full">
-        <div class="w-full flex justify-center pt-3 pb-1" onclick="closeModal()">
+    <!-- PRODUCT MODAL (Центрированный на больших экранах) -->
+    <div id="productModal" class="fixed bottom-0 left-0 right-0 mx-auto max-w-lg z-[55] bg-white rounded-t-[30px] md:rounded-[30px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:max-h-[90vh] h-[85vh] flex flex-col shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full md:scale-95 md:opacity-0 transition-all duration-300">
+        <div class="w-full flex justify-center pt-3 pb-1 md:hidden" onclick="closeModal()">
             <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
         <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-gray-100 p-2 rounded-full shadow-sm active:scale-90 transition-transform">
             <i class="fas fa-times text-gray-500"></i>
         </button>
         
-        <div class="overflow-y-auto flex-1 pb-24">
-            <div class="swiper mySwiper w-full h-[40vh] bg-white mt-2">
+        <div class="overflow-y-auto flex-1 pb-24 md:pb-20">
+            <div class="swiper mySwiper w-full h-[40vh] md:h-[45vh] bg-white mt-2 md:rounded-t-[30px]">
                 <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
                 <div class="swiper-pagination"></div>
             </div>
@@ -118,11 +121,11 @@
 
                 <!-- SIZE CHART ACCORDION -->
                 <div class="mb-4 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
-                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-3 text-xs font-bold text-gray-700 uppercase active:bg-gray-100">
+                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-3 text-xs font-bold text-gray-700 uppercase active:bg-gray-100 transition-colors">
                         <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
                         <i class="fas fa-chevron-down transition-transform duration-300" id="sizeChartArrow"></i>
                     </button>
-                    <div id="sizeChartContainer" class="hidden px-3 pb-3 pt-0 border-t border-gray-200">
+                    <div id="sizeChartContainer" class="hidden px-3 pb-3 pt-0 border-t border-gray-200 overflow-x-auto">
                         <!-- Table injected here -->
                     </div>
                 </div>
@@ -134,13 +137,13 @@
             </div>
         </div>
 
-        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50">
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 flex gap-3 z-50 md:rounded-b-[30px]">
             <div class="flex items-center border border-gray-200 rounded-xl h-12 bg-gray-50">
                 <button onclick="updateQty(-1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-l-xl text-lg font-bold text-gray-500">-</button>
                 <span id="mQty" class="w-8 text-center font-bold text-sm">1</span>
                 <button onclick="updateQty(1)" class="w-10 h-full flex items-center justify-center active:bg-gray-200 rounded-r-xl text-lg font-bold text-gray-500">+</button>
             </div>
-            <button onclick="addToCart()" class="flex-1 bg-black text-white h-12 rounded-xl font-bold uppercase text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+            <button onclick="addToCart()" class="flex-1 bg-black text-white h-12 rounded-xl font-bold uppercase text-sm shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-gray-800">
                 <span>В корзину</span>
                 <i class="fas fa-arrow-right"></i>
             </button>
@@ -152,7 +155,7 @@
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b flex justify-between items-center bg-gray-50">
             <h2 class="text-lg font-black uppercase tracking-tight">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1"></span></h2>
-            <button onclick="toggleCart()" class="p-2 bg-white rounded-full shadow-sm"><i class="fas fa-times text-lg"></i></button>
+            <button onclick="toggleCart()" class="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100"><i class="fas fa-times text-lg"></i></button>
         </div>
         <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
         <div class="p-5 border-t bg-white pb-8 safe-area-pb">
@@ -160,32 +163,32 @@
                 <span class="text-gray-500 font-medium text-sm">Итого к оплате</span>
                 <span id="cartTotal" class="text-xl font-black text-gray-900">0 UZS</span>
             </div>
-            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform">
+            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">
                 Оформить заказ
             </button>
         </div>
     </div>
 
     <!-- ADMIN PANEL -->
-    <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4">
-        <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
+    <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4 md:p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
             <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white sticky top-0 z-10">
-                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-database"></i> Склад</h2>
-                <button onclick="closeAdmin()" class="text-xs bg-gray-700 px-3 py-1.5 rounded hover:bg-gray-600">Закрыть</button>
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-database"></i> Панель управления</h2>
+                <button onclick="closeAdmin()" class="text-xs bg-gray-700 px-3 py-1.5 rounded hover:bg-gray-600 transition-colors">Закрыть</button>
             </div>
             
-            <div class="p-4 space-y-6">
-                <!-- Add Form -->
-                <form id="addForm" class="space-y-4">
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <h3 class="font-bold text-blue-800 mb-3 text-sm uppercase">Новый товар</h3>
+            <div class="p-4 space-y-6 md:flex md:gap-6 md:space-y-0">
+                <!-- Add/Edit Form (Левая колонка на ПК) -->
+                <form id="addForm" class="space-y-4 md:w-1/2">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm transition-all" id="formWrapper">
+                        <h3 id="formTitle" class="font-bold text-blue-800 mb-3 text-sm uppercase">Новый товар</h3>
                         
                         <div class="space-y-3">
-                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none">
+                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                             
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="aPrice" placeholder="Цена" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none">
-                                <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none">
+                                <input type="number" id="aPrice" placeholder="Цена (UZS)" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
+                                <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none focus:border-blue-500">
                                     <option value="" disabled selected>Категория</option>
                                     <option value="Shoes">Обувь</option>
                                     <option value="Apparel">Форма</option>
@@ -194,11 +197,11 @@
                                 </select>
                             </div>
 
-                            <textarea id="aDesc" placeholder="Описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none"></textarea>
+                            <textarea id="aDesc" placeholder="Описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none focus:border-blue-500"></textarea>
 
                             <!-- PHOTO UPLOAD -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Фото (Макс 10)</label>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Фотографии (Макс 10)</label>
                                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
                                     <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
                                     <div class="text-gray-400 text-xs font-bold pointer-events-none">
@@ -216,14 +219,20 @@
                             </div>
                         </div>
 
-                        <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm mt-4 shadow-lg active:scale-95 transition-transform">
-                            СОХРАНИТЬ В БАЗУ
-                        </button>
+                        <div class="flex gap-2 mt-4">
+                            <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-blue-700">
+                                СОХРАНИТЬ В БАЗУ
+                            </button>
+                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-gray-400 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-gray-500">
+                                ОТМЕНА
+                            </button>
+                        </div>
                     </div>
                 </form>
 
-                <div>
-                    <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1">Управление товарами</h3>
+                <!-- Product List (Правая колонка на ПК) -->
+                <div class="md:w-1/2 md:border-l md:border-gray-200 md:pl-6 md:max-h-[75vh] md:overflow-y-auto hide-scrollbar">
+                    <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1 sticky top-0 bg-white z-10 py-2">Управление товарами</h3>
                     <div id="adminList" class="space-y-3"></div>
                 </div>
             </div>
@@ -246,6 +255,11 @@
         let productSwiper = null; 
         const SECRET_CODE = "4443";
 
+        // Состояние редактирования
+        let editMode = false;
+        let editProductId = null;
+        let originalSizes = null;
+
         document.addEventListener('click', (e) => {
             const searchContainer = document.getElementById('searchInput').parentElement;
             if (!searchContainer.contains(e.target) && document.activeElement === document.getElementById('searchInput')) {
@@ -260,9 +274,11 @@
             arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
-        // --- ADMIN: AUTO FILL TABLE (ВАША ТАБЛИЦА) ---
+        // --- ADMIN: AUTO FILL TABLE ---
         document.getElementById('aCat').addEventListener('change', function() {
             const textArea = document.getElementById('aSizeChartText');
+            // При ручном изменении категории заполняем шаблон. 
+            // В режиме редактирования (когда заполняем программно), change не вызывается, поэтому текст не затрется.
             if (this.value === 'Apparel') {
                 textArea.value = 
                     "O'LCHAM,SON,BO'Y SM,VAZN KG\n" +
@@ -292,17 +308,26 @@
 
         async function saveProduct(prod) {
             const btn = document.getElementById('saveBtn');
-            const originalText = btn.innerText;
+            const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
             btn.disabled = true;
             try {
                 await fetch('/api/products', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(prod) });
                 await loadProducts();
                 renderAdminList();
-                resetForm();
-                alert('Товар добавлен!');
+                
+                if (editMode) {
+                    cancelEdit();
+                    alert('Изменения сохранены!');
+                } else {
+                    resetForm();
+                    alert('Товар успешно добавлен!');
+                }
             } catch (e) { alert('Ошибка сохранения'); }
-            finally { btn.innerHTML = originalText; btn.disabled = false; }
+            finally { 
+                if (!editMode) btn.innerHTML = originalText; 
+                btn.disabled = false; 
+            }
         }
 
         function resetForm() {
@@ -311,9 +336,59 @@
             renderPhotoPreview();
         }
 
+        // --- ФУНКЦИИ РЕДАКТИРОВАНИЯ ---
+        function editProduct(id) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            editMode = true;
+            editProductId = prod.id;
+            originalSizes = { ...prod.sizes };
+
+            // Заполняем форму
+            document.getElementById('aName').value = prod.name;
+            document.getElementById('aPrice').value = prod.price;
+            document.getElementById('aCat').value = prod.category;
+            document.getElementById('aDesc').value = prod.description || '';
+            document.getElementById('aSizeChartText').value = prod.sizeChart || '';
+
+            // Загружаем фото
+            uploadedImages = [...prod.images];
+            renderPhotoPreview();
+
+            // Меняем UI формы
+            document.getElementById('formWrapper').classList.replace('bg-blue-50', 'bg-yellow-50');
+            document.getElementById('formWrapper').classList.replace('border-blue-100', 'border-yellow-200');
+            document.getElementById('formTitle').innerText = '✏️ Редактирование товара';
+            document.getElementById('formTitle').classList.replace('text-blue-800', 'text-yellow-800');
+            
+            document.getElementById('saveBtn').innerText = 'СОХРАНИТЬ ИЗМЕНЕНИЯ';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+            // Скроллим наверх
+            document.getElementById('adminModal').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editMode = false;
+            editProductId = null;
+            originalSizes = null;
+            resetForm();
+
+            // Возвращаем UI
+            document.getElementById('formWrapper').classList.replace('bg-yellow-50', 'bg-blue-50');
+            document.getElementById('formWrapper').classList.replace('border-yellow-200', 'border-blue-100');
+            document.getElementById('formTitle').innerText = 'Новый товар';
+            document.getElementById('formTitle').classList.replace('text-yellow-800', 'text-blue-800');
+            
+            document.getElementById('saveBtn').innerText = 'СОХРАНИТЬ В БАЗУ';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
         async function deleteProduct(id) {
-            if(!confirm('Удалить?')) return;
+            if(!confirm('Удалить этот товар навсегда?')) return;
             await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            if (editMode && editProductId === id) cancelEdit();
             await loadProducts();
             renderAdminList();
         }
@@ -332,11 +407,11 @@
 
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
-            if(items.length === 0) { grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-10 text-sm">Товаров нет</div>'; return; }
+            if(items.length === 0) { grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 text-sm">Товаров пока нет</div>'; return; }
             grid.innerHTML = items.map(p => `
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onclick="openModal('${p.id}')">
-                    <div class="aspect-[4/5] relative bg-gray-50">
-                        <img src="${p.images[0]}" class="w-full h-full object-cover">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all" onclick="openModal('${p.id}')">
+                    <div class="aspect-[4/5] relative bg-gray-50 group">
+                        <img src="${p.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-gray-900 text-white px-3 py-1 text-[10px] font-bold uppercase rounded-full">Продано</span></div>' : ''}
                     </div>
                     <div class="p-3">
@@ -390,13 +465,16 @@
             
             sizesContainer.innerHTML = sortedSizes.map(s => {
                 const avail = currentProduct.sizes[s];
-                return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg px-4 py-2 text-sm font-bold transition-all ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700 active:bg-gray-100'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
+                return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg px-4 py-2 text-sm font-bold transition-all hover:bg-gray-50 ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700 active:bg-gray-100'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
+            const modal = document.getElementById('productModal');
             document.getElementById('modalBackdrop').classList.remove('hidden');
             setTimeout(() => {
-                document.getElementById('productModal').classList.add('modal-open');
-                document.getElementById('productModal').classList.remove('translate-y-full');
+                modal.classList.add('modal-open');
+                modal.classList.remove('translate-y-full');
+                // Desktop animations
+                modal.classList.remove('md:opacity-0', 'md:scale-95');
             }, 10);
         }
 
@@ -430,8 +508,11 @@
         }
 
         function closeModal() {
-            document.getElementById('productModal').classList.remove('modal-open');
-            document.getElementById('productModal').classList.add('translate-y-full');
+            const modal = document.getElementById('productModal');
+            modal.classList.remove('modal-open');
+            modal.classList.add('translate-y-full');
+            // Desktop animations
+            modal.classList.add('md:opacity-0', 'md:scale-95');
             setTimeout(() => { document.getElementById('modalBackdrop').classList.add('hidden'); }, 300);
         }
 
@@ -454,11 +535,15 @@
         }
 
         function addToCart() {
-            if(!selectedSize) { tg.HapticFeedback.notificationOccurred('error'); alert('Выберите размер!'); return; }
+            if(!selectedSize) { 
+                try { tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
+                alert('Пожалуйста, выберите размер!'); 
+                return; 
+            }
             cart.push({ ...currentProduct, cartId: Date.now(), selectedSize, qty });
             closeModal();
             updateCart();
-            tg.HapticFeedback.notificationOccurred('success');
+            try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
         }
 
         function updateCart() {
@@ -480,13 +565,13 @@
             } else {
                 cnt.innerHTML = cart.map((i, idx) => `
                     <div class="flex gap-3 bg-gray-50 p-2 rounded-xl border border-gray-100">
-                        <img src="${i.images[0]}" class="w-16 h-16 object-cover rounded-lg bg-white">
+                        <img src="${i.images[0]}" class="w-16 h-16 object-cover rounded-lg bg-white border border-gray-100">
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <h4 class="font-bold text-sm truncate mr-2">${i.name}</h4>
-                                <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1"><i class="fas fa-times"></i></button>
+                                <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1 hover:text-red-500 transition-colors"><i class="fas fa-times"></i></button>
                             </div>
-                            <p class="text-xs text-gray-500 mb-1">Размер: <b>${i.selectedSize}</b></p>
+                            <p class="text-xs text-gray-500 mb-1">Размер: <b class="text-gray-700">${i.selectedSize}</b></p>
                             <div class="flex justify-between items-center">
                                 <span class="text-blue-600 font-bold text-sm">${formatMoney(i.price * i.qty)}</span>
                                 <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-gray-600 font-bold">x${i.qty}</span>
@@ -529,9 +614,9 @@
         function renderPhotoPreview() {
             const container = document.getElementById('photoPreviewContainer');
             container.innerHTML = uploadedImages.map((img, idx) => `
-                <div class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200">
+                <div class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                     <img src="${img}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
                         <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
                         ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
@@ -575,36 +660,73 @@
 
             const cat = document.getElementById('aCat').value;
             let sizes = {};
+            
+            // Если мы редактируем товар, и категория не поменялась - сохраняем старые размеры и их наличие
+            if (editMode && originalSizes) {
+                const existingProd = products.find(p => p.id === editProductId);
+                if (existingProd && existingProd.category === cat) {
+                    sizes = { ...originalSizes }; 
+                } else {
+                    sizes = generateSizesForCat(cat); 
+                }
+            } else {
+                sizes = generateSizesForCat(cat);
+            }
+
+            const prod = {
+                id: editMode ? editProductId : 'p' + Date.now(), 
+                name: document.getElementById('aName').value, 
+                price: parseFloat(document.getElementById('aPrice').value),
+                description: document.getElementById('aDesc').value, 
+                category: cat, 
+                images: uploadedImages, 
+                sizes: sizes,
+                isAvailable: 1, 
+                sizeChart: document.getElementById('aSizeChartText').value
+            };
+
+            // Сохраняем статус "В наличии / Продано", если это редактирование
+            if (editMode) {
+                const existingProd = products.find(p => p.id === editProductId);
+                if (existingProd) prod.isAvailable = existingProd.isAvailable;
+            }
+
+            saveProduct(prod);
+        });
+
+        function generateSizesForCat(cat) {
+            let sizes = {};
             if(cat === 'Shoes') { for(let i=35; i<=45; i++) sizes[i] = true; }
             else if(cat === 'Apparel') { ['S','M','L','XL','2XL'].forEach(s => sizes[s]=true); }
             else if(cat === 'Equipment') { [10,15,20,22,28,30].forEach(s => sizes[s]=true); }
             else { sizes['Standard'] = true; }
+            return sizes;
+        }
 
-            const prod = {
-                id: 'p' + Date.now(), name: document.getElementById('aName').value, price: parseFloat(document.getElementById('aPrice').value),
-                description: document.getElementById('aDesc').value, category: cat, images: uploadedImages, sizes: sizes,
-                isAvailable: 1, sizeChart: document.getElementById('aSizeChartText').value
-            };
-            saveProduct(prod);
-        });
-
+        // Рендер списка товаров (с кнопкой редактирования)
         function renderAdminList() {
             const list = document.getElementById('adminList');
             list.innerHTML = products.map(p => `
-                <div class="bg-white border border-gray-200 p-3 rounded-xl mb-3 shadow-sm">
+                <div class="bg-white border border-gray-200 p-3 rounded-xl mb-3 shadow-sm hover:shadow transition-shadow">
                     <div class="flex gap-3 mb-3">
-                        <img src="${p.images[0]}" class="w-12 h-12 object-cover rounded-lg bg-gray-100">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate">${p.name}</div>
-                            <div class="text-xs text-gray-500">${formatMoney(p.price)}</div>
+                        <img src="${p.images[0]}" class="w-16 h-16 object-cover rounded-lg bg-gray-100 border border-gray-100 shrink-0">
+                        <div class="flex-1 min-w-0 pr-1">
+                            <div class="font-bold text-sm truncate mb-0.5" title="${p.name}">${p.name}</div>
+                            <div class="text-blue-600 font-bold text-xs mb-1">${formatMoney(p.price)}</div>
+                            <div class="text-[10px] text-gray-500 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-2 py-1 rounded text-[10px] font-bold border ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}">${p.isAvailable ? 'ВКЛ' : 'ВЫКЛ'}</button>
-                            <button onclick="deleteProduct('${p.id}')" class="text-red-500 p-2 bg-red-50 rounded-lg h-8 w-8 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        <div class="flex flex-col gap-1 items-end shrink-0">
+                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="w-[85px] py-1.5 rounded-md text-[9px] font-bold border transition-colors ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}">${p.isAvailable ? 'В НАЛИЧИИ' : 'ПРОДАНО'}</button>
+                            <div class="flex gap-1 mt-1 w-[85px]">
+                                <!-- КНОПКА РЕДАКТИРОВАТЬ -->
+                                <button onclick="editProduct('${p.id}')" title="Редактировать товар" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <!-- КНОПКА УДАЛИТЬ -->
+                                <button onclick="deleteProduct('${p.id}')" title="Удалить товар" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-1.5 pt-2 border-t border-gray-100">
-                        ${Object.keys(p.sizes).sort().map(s => `<button onclick="toggleSizeStock('${p.id}', '${s}', ${p.sizes[s]})" class="px-2 py-1 text-[10px] font-bold border rounded transition-colors ${p.sizes[s] ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-400 border-gray-200 line-through'}">${s}</button>`).join('')}
+                        ${Object.keys(p.sizes).sort().map(s => `<button onclick="toggleSizeStock('${p.id}', '${s}', ${p.sizes[s]})" class="px-2 py-1 text-[10px] font-bold border rounded transition-colors ${p.sizes[s] ? 'bg-gray-800 text-white border-gray-800 hover:bg-gray-700' : 'bg-white text-gray-400 border-gray-200 line-through hover:bg-gray-50'}">${s}</button>`).join('')}
                     </div>
                 </div>
             `).join('');
