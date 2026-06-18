@@ -14,35 +14,59 @@
         .swiper-pagination-bullet-active { background-color: #000 !important; }
         input:focus { font-size: 16px; } 
         
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         
-        #productModal { transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1); }
-        .modal-open { transform: translateY(0) !important; }
-        
+        /* Стили для таблицы размеров */
         .size-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; background: white; }
         .size-table th, .size-table td { border: 1px solid #e5e7eb; padding: 10px 4px; text-align: center; }
-        .size-table th { background-color: #f3f4f6; color: #374151; font-weight: 700; text-transform: uppercase; font-size: 11px;}
+        .size-table th { background-color: #f3f4f6; color: #374151; font-weight: 700; text-transform: uppercase; }
         .size-table tr:nth-child(even) { background-color: #f9fafb; }
+
+        /* Адаптивное окно продукта (Мобилка = Modal, ПК = Full Page) */
+        .product-view {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            height: 88vh;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .product-view.open { transform: translateY(0); }
+
+        @media (min-width: 768px) {
+            .product-view {
+                top: 0; bottom: 0; left: 0; right: 0;
+                height: 100vh;
+                border-radius: 0;
+                transform: translateY(20px);
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.3s ease;
+                overflow-y: auto;
+                display: block; /* Снимаем flex чтобы скроллилась вся страница */
+            }
+            .product-view.open {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
 
-    <!-- Sticky Navigation -->
-    <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all" id="navBar">
+    <!-- Навигация -->
+    <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all">
         <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1 max-w-6xl mx-auto w-full" onclick="window.scrollTo(0,0)">
-            <div class="flex-1">
-                KOS <span class="text-blue-600">SPORT</span>
-            </div>
-            
+            <div class="flex-1">KOS <span class="text-blue-600">SPORT</span></div>
             <div class="flex items-center gap-2 justify-end">
                 <div class="relative group">
-                    <input type="text" id="searchInput" placeholder="Поиск" 
-                           class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 sm:focus:w-64 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                    <input type="text" id="searchInput" placeholder="Поиск" class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-28 focus:w-48 sm:focus:w-64 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
                     <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
                 </div>
                 <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
@@ -53,7 +77,7 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
+    <!-- Главная страница (Каталог) -->
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[60px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
             <button onclick="filter('All')" class="cat-btn bg-black text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-sm">Все</button>
@@ -61,122 +85,114 @@
             <button onclick="filter('Apparel')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Форма</button>
             <button onclick="filter('Equipment')" class="cat-btn bg-white border text-gray-700 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Инвентарь</button>
         </div>
-
         <div id="loader" class="flex justify-center py-20"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i></div>
         <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"></div>
     </main>
 
-    <!-- PRODUCT MODAL BACKDROP -->
-    <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+    <!-- Затенение для мобилок -->
+    <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden md:hidden transition-opacity" onclick="closeProduct()"></div>
 
-    <!-- PRODUCT MODAL (Адаптивный: снизу на мобильных, по центру на ПК) -->
-    <div id="productModal" class="fixed bottom-0 left-0 right-0 mx-auto max-w-lg md:max-w-4xl lg:max-w-5xl z-[55] bg-white rounded-t-[30px] md:rounded-[20px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:max-h-[90vh] h-[85vh] md:h-auto shadow-[0_-5px_40px_rgba(0,0,0,0.3)] transform translate-y-full md:scale-95 md:opacity-0 transition-all duration-300 flex flex-col md:flex-row overflow-hidden">
+    <!-- СТРАНИЦА ПРОДУКТА (Adaptive: Sheet on Mobile, Full Page on Desktop) -->
+    <div id="productView" class="product-view shadow-[0_-5px_40px_rgba(0,0,0,0.3)] md:shadow-none">
         
-        <!-- Mobile Swipe Handle -->
-        <div class="w-full flex justify-center pt-3 pb-2 md:hidden absolute top-0 z-50 bg-white/80 backdrop-blur-md rounded-t-[30px]" onclick="closeModal()">
+        <!-- Ползунок закрытия для мобильных -->
+        <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="closeProduct()">
             <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
 
-        <!-- Close Btn (PC) -->
-        <button onclick="closeModal()" class="hidden md:flex absolute top-4 right-4 z-50 bg-gray-100 hover:bg-gray-200 p-2.5 rounded-full shadow-sm active:scale-90 transition-all">
-            <i class="fas fa-times text-gray-500"></i>
-        </button>
-        
-        <!-- LEFT: Product Image Slider -->
-        <div class="w-full md:w-1/2 h-[45vh] md:h-auto md:min-h-[500px] bg-gray-50 relative shrink-0 pt-8 md:pt-0">
-            <!-- Mobile overlay close btn -->
-            <button onclick="closeModal()" class="md:hidden absolute top-4 right-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm">
-                <i class="fas fa-times text-gray-600 text-sm"></i>
-            </button>
-
-            <div class="swiper mySwiper w-full h-full">
-                <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
-                <div class="swiper-pagination"></div>
-            </div>
-            <!-- Декоративный бейдж на фото (как на скрине KOS) -->
-            <div class="absolute top-4 left-4 z-10 hidden md:block">
-                <div class="bg-black text-green-500 font-black px-3 py-2 border-2 border-green-500 rounded text-center leading-none">
-                    <span class="text-xl">K</span><br><span class="text-white text-xs">KOS</span>
-                </div>
+        <!-- Шапка для ПК (Кнопка Назад) -->
+        <div class="hidden md:flex items-center justify-between p-4 px-8 bg-white border-b sticky top-0 z-20">
+            <div class="max-w-6xl mx-auto w-full">
+                <button onclick="closeProduct()" class="flex items-center gap-2 text-gray-600 hover:text-black font-bold transition-colors">
+                    <i class="fas fa-arrow-left"></i> Назад в каталог
+                </button>
             </div>
         </div>
 
-        <!-- RIGHT: Product Info -->
-        <div class="w-full md:w-1/2 flex flex-col flex-1 overflow-y-auto pb-24 md:pb-0 relative bg-white hide-scrollbar">
-            <div class="p-5 md:p-8 flex-1">
+        <!-- Контент продукта -->
+        <div class="flex-1 overflow-y-auto md:overflow-visible pb-24 md:pb-10">
+            <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12">
                 
-                <!-- Badges -->
-                <div class="flex gap-2 mb-3 items-center">
-                    <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider" id="mCategory"></span>
-                    <span class="bg-green-100 text-green-600 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">НОВОЕ</span>
-                </div>
-
-                <!-- Title & Price -->
-                <h1 id="mName" class="text-xl md:text-3xl font-black leading-tight mb-2 text-gray-900"></h1>
-                <div class="text-2xl md:text-3xl font-bold text-gray-900 mb-6" id="mPrice"></div>
-
-                <!-- Sizes -->
-                <div class="mb-6">
-                    <div class="flex justify-between items-end mb-3">
-                        <label class="block text-sm font-bold text-gray-800">Размер</label>
-                    </div>
-                    <div id="mSizes" class="flex flex-wrap gap-2"></div>
-                    <p class="text-[11px] text-gray-400 mt-2">Выберите размер</p>
-                </div>
-
-                <!-- Features Block (Из дизайна) -->
-                <div class="bg-gray-50 rounded-2xl p-4 mb-8 flex justify-between items-start md:items-center text-[10px] sm:text-xs text-gray-600 font-medium">
-                    <div class="flex flex-col items-center gap-2 text-center w-1/3 px-1">
-                        <i class="fas fa-trophy text-green-600 text-lg md:text-xl"></i>
-                        <span class="leading-tight">Профессиональная<br>экипировка</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-2 text-center w-1/3 border-x border-gray-200 px-1">
-                        <i class="fas fa-sync-alt text-green-600 text-lg md:text-xl"></i>
-                        <span class="leading-tight">Обмен и<br>возврат</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-2 text-center w-1/3 px-1">
-                        <i class="fas fa-paper-plane text-green-600 text-lg md:text-xl"></i>
-                        <span class="leading-tight">Поддержка в<br>Telegram</span>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div class="mb-6">
-                    <h3 class="font-bold text-gray-900 mb-2">Описание</h3>
-                    <div class="relative">
-                        <p id="mDesc" class="text-gray-500 text-sm leading-relaxed line-clamp-3 transition-all duration-300"></p>
-                        <button id="readMoreBtn" onclick="toggleDesc()" class="text-blue-600 text-xs font-bold mt-1 hidden hover:underline">Читать далее</button>
-                    </div>
-                </div>
-
-                <!-- Size Chart Accordion -->
-                <div class="mb-4 bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-4 text-sm font-bold text-gray-900 hover:bg-gray-50 transition-colors">
-                        <span class="flex items-center gap-2"><i class="fas fa-ruler-combined text-gray-400"></i> Таблица размеров</span>
-                        <i class="fas fa-chevron-down text-gray-400 transition-transform duration-300" id="sizeChartArrow"></i>
+                <!-- ЛЕВАЯ ЧАСТЬ: Фотографии -->
+                <div class="w-full relative">
+                    <button onclick="closeProduct()" class="md:hidden absolute top-4 right-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm active:scale-90">
+                        <i class="fas fa-times text-gray-600"></i>
                     </button>
-                    <div id="sizeChartContainer" class="hidden px-4 pb-4 pt-0 border-t border-gray-100 overflow-x-auto">
-                        <!-- Table injected here -->
+                    <div class="swiper mySwiper w-full h-[45vh] md:h-[600px] bg-gray-50 md:rounded-3xl border border-gray-100 overflow-hidden">
+                        <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
+                        <div class="swiper-pagination"></div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bottom Action Bar (Fixed on Mobile, Static on PC) -->
-            <div class="fixed md:static bottom-0 left-0 right-0 p-4 md:px-8 md:pb-8 md:pt-0 bg-white border-t border-gray-100 md:border-none flex gap-3 z-40 md:mt-auto">
-                <div class="flex items-center border border-gray-200 rounded-xl h-14 bg-gray-50">
-                    <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center hover:bg-gray-200 rounded-l-xl text-xl font-bold text-gray-500 transition-colors">-</button>
-                    <span id="mQty" class="w-8 text-center font-bold text-sm">1</span>
-                    <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center hover:bg-gray-200 rounded-r-xl text-xl font-bold text-gray-500 transition-colors">+</button>
+                <!-- ПРАВАЯ ЧАСТЬ: Детали товара -->
+                <div class="p-5 md:p-0 flex flex-col justify-center">
+                    
+                    <!-- Бейджи (Как на фото) -->
+                    <div class="flex gap-2 mb-3">
+                        <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold uppercase" id="mCategory"></span>
+                        <span class="bg-green-50 text-green-600 px-2 py-1 rounded text-xs font-bold uppercase hidden md:inline-block">В наличии</span>
+                    </div>
+
+                    <!-- Название и Цена -->
+                    <h1 id="mName" class="text-2xl md:text-3xl font-black text-gray-900 leading-tight mb-2"></h1>
+                    <div id="mPrice" class="text-2xl md:text-3xl font-bold text-gray-900 mb-6"></div>
+
+                    <!-- Выбор размера -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-500 mb-3">Размер</label>
+                        <div id="mSizes" class="flex flex-wrap gap-2 mb-2"></div>
+                        <p class="text-xs text-gray-400 mt-1" id="sizeHelper">Выберите размер</p>
+                    </div>
+
+                    <!-- Инфо панель (Как на фото) -->
+                    <div class="hidden md:flex justify-between items-center bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-8">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-trophy text-green-500 text-xl"></i>
+                            <span class="text-xs font-medium text-gray-700 leading-tight">Профессиональная<br>экипировка</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-sync-alt text-green-500 text-xl"></i>
+                            <span class="text-xs font-medium text-gray-700">Обмен и возврат</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fab fa-telegram-plane text-green-500 text-xl"></i>
+                            <span class="text-xs font-medium text-gray-700 leading-tight">Поддержка в<br>Telegram</span>
+                        </div>
+                    </div>
+
+                    <!-- Действия (На ПК тут, на мобилке fixed bottom) -->
+                    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50">
+                        <div class="flex items-center border border-gray-200 rounded-xl h-14 md:h-14 bg-gray-50 shrink-0">
+                            <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-gray-500 active:bg-gray-200 rounded-l-xl">-</button>
+                            <span id="mQty" class="w-8 text-center font-bold text-lg">1</span>
+                            <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-gray-500 active:bg-gray-200 rounded-r-xl">+</button>
+                        </div>
+                        <button onclick="addToCart()" class="flex-1 bg-black text-white h-14 rounded-xl font-bold text-base shadow-lg active:scale-95 transition-transform hover:bg-gray-800 flex items-center justify-center gap-2">
+                            <span>В корзину</span>
+                        </button>
+                    </div>
+
+                    <!-- Описание -->
+                    <div class="mt-6 md:mt-8 mb-4">
+                        <h3 class="font-bold text-gray-900 text-base mb-2">Описание</h3>
+                        <p id="mDesc" class="text-gray-600 text-sm leading-relaxed"></p>
+                    </div>
+
+                    <!-- Таблица размеров -->
+                    <div class="mt-4 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
+                        <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-4 text-sm font-bold text-gray-900 uppercase active:bg-gray-100 transition-colors">
+                            <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
+                            <i class="fas fa-chevron-down transition-transform duration-300" id="sizeChartArrow"></i>
+                        </button>
+                        <div id="sizeChartContainer" class="hidden px-4 pb-4 pt-0 border-t border-gray-200 overflow-x-auto"></div>
+                    </div>
+
                 </div>
-                <button onclick="addToCart()" class="flex-1 bg-black text-white h-14 rounded-xl font-bold text-sm md:text-base shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-gray-800">
-                    <span>В корзину</span>
-                    <i class="fas fa-arrow-right"></i>
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- CART SIDEBAR -->
+    <!-- КОРЗИНА -->
     <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-[60] hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b flex justify-between items-center bg-gray-50">
@@ -195,7 +211,7 @@
         </div>
     </div>
 
-    <!-- ADMIN PANEL -->
+    <!-- АДМИН ПАНЕЛЬ -->
     <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4 md:p-8">
         <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
             <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white sticky top-0 z-10">
@@ -209,10 +225,10 @@
                         <h3 id="formTitle" class="font-bold text-blue-800 mb-3 text-sm uppercase">Новый товар</h3>
                         
                         <div class="space-y-3">
-                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
                             
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="aPrice" placeholder="Цена (СУМ)" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
+                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
                                 <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none focus:border-blue-500">
                                     <option value="" disabled selected>Категория</option>
                                     <option value="Shoes">Обувь</option>
@@ -256,6 +272,7 @@
         </div>
     </div>
 
+    <!-- JS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <script>
@@ -274,6 +291,7 @@
         let editProductId = null;
         let originalSizes = null;
 
+        // Поиск
         document.addEventListener('click', (e) => {
             const searchContainer = document.getElementById('searchInput').parentElement;
             if (!searchContainer.contains(e.target) && document.activeElement === document.getElementById('searchInput')) {
@@ -281,6 +299,7 @@
             }
         });
 
+        // Открытие/закрытие таблицы
         function toggleSizeChart() {
             const container = document.getElementById('sizeChartContainer');
             const arrow = document.getElementById('sizeChartArrow');
@@ -288,6 +307,7 @@
             arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
+        // Автозаполнение
         document.getElementById('aCat').addEventListener('change', function() {
             const textArea = document.getElementById('aSizeChartText');
             if (this.value === 'Apparel') {
@@ -296,11 +316,10 @@
                 textArea.value = "Размер,Стопа (см)\n38,24.5\n39,25.0\n40,25.5\n41,26.5\n42,27.0\n43,27.5\n44,28.5\n45,29.5";
             } else if (this.value === 'Equipment') {
                 textArea.value = "Стандарт,Размер\nOneSize,Универсальный";
-            } else {
-                textArea.value = "";
-            }
+            } else { textArea.value = ""; }
         });
 
+        // API
         async function loadProducts() {
             try {
                 const res = await fetch('/api/products');
@@ -361,7 +380,6 @@
             editProductId = null;
             originalSizes = null;
             resetForm();
-
             document.getElementById('formWrapper').classList.replace('bg-yellow-50', 'bg-blue-50');
             document.getElementById('formWrapper').classList.replace('border-yellow-200', 'border-blue-100');
             document.getElementById('formTitle').innerText = 'Новый товар';
@@ -390,11 +408,12 @@
             renderAdminList();
         }
 
+        // РЕНДЕР КАТАЛОГА
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
             if(items.length === 0) { grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 text-sm">Товаров пока нет</div>'; return; }
             grid.innerHTML = items.map(p => `
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all" onclick="openModal('${p.id}')">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md active:scale-[0.98] transition-all" onclick="openProduct('${p.id}')">
                     <div class="aspect-[4/5] relative bg-gray-50 group">
                         <img src="${p.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-gray-900 text-white px-3 py-1 text-[10px] font-bold uppercase rounded-full">Продано</span></div>' : ''}
@@ -408,13 +427,16 @@
             `).join('');
         }
 
-        function openModal(id) {
+        // ОТКРЫТИЕ СТРАНИЦЫ ТОВАРА
+        function openProduct(id) {
             currentProduct = products.find(p => p.id === id);
             if(!currentProduct) return;
             
             selectedSize = null;
             qty = 1;
             document.getElementById('mQty').innerText = 1;
+            document.getElementById('sizeHelper').innerText = 'Выберите размер';
+            document.getElementById('sizeHelper').classList.replace('text-red-500', 'text-gray-400');
             
             document.getElementById('sizeChartContainer').classList.add('hidden');
             document.getElementById('sizeChartArrow').style.transform = 'rotate(0deg)';
@@ -424,11 +446,7 @@
             document.getElementById('mCategory').innerText = translateCat(currentProduct.category);
             
             const descEl = document.getElementById('mDesc');
-            const btnEl = document.getElementById('readMoreBtn');
             descEl.innerText = currentProduct.description || "Описание отсутствует.";
-            descEl.classList.add('line-clamp-3');
-            btnEl.innerText = 'Читать далее';
-            btnEl.style.display = descEl.innerText.length > 100 ? 'block' : 'none';
 
             const scContainer = document.getElementById('sizeChartContainer');
             if (currentProduct.sizeChart && currentProduct.sizeChart.includes(',')) {
@@ -439,30 +457,24 @@
 
             const wrapper = document.getElementById('modalSwiperWrapper');
             wrapper.innerHTML = currentProduct.images.map(img => `
-                <div class="swiper-slide bg-gray-50 flex items-center justify-center h-full">
-                    <img src="${img}" class="w-full h-full object-cover">
-                </div>
+                <div class="swiper-slide bg-white flex items-center justify-center p-0 md:p-6"><img src="${img}" class="w-full h-full object-contain"></div>
             `).join('');
             
             if (productSwiper) productSwiper.destroy(true, true);
-            productSwiper = new Swiper(".mySwiper", { initialSlide: 0, spaceBetween: 0, pagination: { el: ".swiper-pagination", clickable: true } });
+            productSwiper = new Swiper(".mySwiper", { initialSlide: 0, spaceBetween: 10, pagination: { el: ".swiper-pagination", clickable: true } });
 
             const sizesContainer = document.getElementById('mSizes');
             const sortedSizes = sortSizes(Object.keys(currentProduct.sizes));
             
-            // Квадратные кнопки размеров как на фото
             sizesContainer.innerHTML = sortedSizes.map(s => {
                 const avail = currentProduct.sizes[s];
-                return `<button onclick="selectSize('${s}')" class="size-btn min-w-[3rem] h-10 border border-gray-200 rounded-md px-3 text-sm font-bold transition-all hover:border-gray-400 ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50' : 'bg-white text-gray-700'} " ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
+                // Квадратные кнопки (как на фото)
+                return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg w-12 h-12 flex items-center justify-center text-sm font-medium transition-all hover:border-black ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50 hover:border-gray-200' : 'bg-white text-gray-700'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
-            const modal = document.getElementById('productModal');
+            const modal = document.getElementById('productView');
             document.getElementById('modalBackdrop').classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.add('modal-open');
-                modal.classList.remove('translate-y-full');
-                modal.classList.remove('md:opacity-0', 'md:scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.add('open'); }, 10);
         }
 
         function generateTableFromCSV(text) {
@@ -482,23 +494,9 @@
             return html;
         }
 
-        function toggleDesc() {
-            const desc = document.getElementById('mDesc');
-            const btn = document.getElementById('readMoreBtn');
-            if (desc.classList.contains('line-clamp-3')) {
-                desc.classList.remove('line-clamp-3');
-                btn.innerText = 'Свернуть';
-            } else {
-                desc.classList.add('line-clamp-3');
-                btn.innerText = 'Читать далее';
-            }
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('productModal');
-            modal.classList.remove('modal-open');
-            modal.classList.add('translate-y-full');
-            modal.classList.add('md:opacity-0', 'md:scale-95');
+        function closeProduct() {
+            const modal = document.getElementById('productView');
+            modal.classList.remove('open');
             setTimeout(() => { document.getElementById('modalBackdrop').classList.add('hidden'); }, 300);
         }
 
@@ -506,16 +504,15 @@
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
                 if(b.disabled) return;
-                // Сброс до начального стиля
-                b.classList.remove('bg-gray-900', 'text-white', 'border-gray-900');
-                b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
-                
+                b.classList.remove('ring-2', 'ring-black', 'border-black');
+                b.classList.add('border-gray-200');
                 if(b.dataset.size === size) {
-                    // Выбранный стиль
-                    b.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-                    b.classList.add('bg-gray-900', 'text-white', 'border-gray-900');
+                    b.classList.remove('border-gray-200');
+                    b.classList.add('ring-2', 'ring-black', 'border-black');
                 }
             });
+            document.getElementById('sizeHelper').innerText = 'Размер выбран';
+            document.getElementById('sizeHelper').classList.replace('text-red-500', 'text-green-600');
         }
 
         function updateQty(d) {
@@ -526,11 +523,13 @@
         function addToCart() {
             if(!selectedSize) { 
                 try { tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
-                alert('Пожалуйста, выберите размер!'); 
+                document.getElementById('sizeHelper').innerText = 'Пожалуйста, выберите размер!';
+                document.getElementById('sizeHelper').classList.replace('text-gray-400', 'text-red-500');
+                document.getElementById('sizeHelper').classList.replace('text-green-600', 'text-red-500');
                 return; 
             }
             cart.push({ ...currentProduct, cartId: Date.now(), selectedSize, qty });
-            closeModal();
+            closeProduct();
             updateCart();
             try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
         }
@@ -571,7 +570,7 @@
             }
 
             if (total > 0) {
-                tg.MainButton.setText(`ЗАКАЗАТЬ: ${formatMoney(total)}`);
+                tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
                 tg.MainButton.show();
             } else { tg.MainButton.hide(); }
         }
@@ -587,7 +586,7 @@
         
         tg.onEvent('mainButtonClicked', sendOrder);
 
-        // --- ADMIN ---
+        // --- ADMIN Скрипты ---
         document.getElementById('searchInput').addEventListener('input', (e) => {
             const val = e.target.value;
             if(val === SECRET_CODE) { openAdminPanel(); e.target.value = ''; e.target.blur(); } 
@@ -652,32 +651,23 @@
             
             if (editMode && originalSizes) {
                 const existingProd = products.find(p => p.id === editProductId);
-                if (existingProd && existingProd.category === cat) {
-                    sizes = { ...originalSizes }; 
-                } else {
-                    sizes = generateSizesForCat(cat); 
-                }
-            } else {
-                sizes = generateSizesForCat(cat);
-            }
+                if (existingProd && existingProd.category === cat) { sizes = { ...originalSizes }; } 
+                else { sizes = generateSizesForCat(cat); }
+            } else { sizes = generateSizesForCat(cat); }
 
             const prod = {
                 id: editMode ? editProductId : 'p' + Date.now(), 
                 name: document.getElementById('aName').value, 
                 price: parseFloat(document.getElementById('aPrice').value),
                 description: document.getElementById('aDesc').value, 
-                category: cat, 
-                images: uploadedImages, 
-                sizes: sizes,
-                isAvailable: 1, 
-                sizeChart: document.getElementById('aSizeChartText').value
+                category: cat, images: uploadedImages, sizes: sizes,
+                isAvailable: 1, sizeChart: document.getElementById('aSizeChartText').value
             };
 
             if (editMode) {
                 const existingProd = products.find(p => p.id === editProductId);
                 if (existingProd) prod.isAvailable = existingProd.isAvailable;
             }
-
             saveProduct(prod);
         });
 
@@ -704,8 +694,8 @@
                         <div class="flex flex-col gap-1 items-end shrink-0">
                             <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="w-[85px] py-1.5 rounded-md text-[9px] font-bold border transition-colors ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}">${p.isAvailable ? 'В НАЛИЧИИ' : 'ПРОДАНО'}</button>
                             <div class="flex gap-1 mt-1 w-[85px]">
-                                <button onclick="editProduct('${p.id}')" title="Редактировать товар" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Удалить товар" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
                             </div>
                         </div>
                     </div>
@@ -722,7 +712,7 @@
         function openAdminPanel() { renderAdminList(); document.getElementById('adminModal').classList.remove('hidden'); }
         function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
         function sortSizes(keys) {
-            const order = ['S','M','L','XL','2XL'];
+            const order = ['S','M','L','XL','2XL', 'XXL'];
             return keys.sort((a,b) => {
                 const nA = parseFloat(a), nB = parseFloat(b);
                 if(!isNaN(nA) && !isNaN(nB)) return nA - nB;
