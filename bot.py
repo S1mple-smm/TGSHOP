@@ -15,7 +15,7 @@ except ImportError:
 
 load_dotenv()
 
-# --- 1. НАСТРОЙКИ (Больше не нужен config.py!) ---
+# --- 1. НАСТРОЙКИ ---
 class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     ADMIN_ID = os.getenv("ADMIN_ID")
@@ -240,6 +240,44 @@ async def api_toggle_size(request):
     db.toggle_size_stock(data['id'], data['size'], data['status'])
     return web.json_response({"status": "ok"})
 
+# НОВЫЙ ЭНДПОИНТ: Принимает заказ прямо с сайта и уведомляет админа в Telegram
+async def api_create_order(request):
+    try:
+        data = await request.json()
+        name = data.get('user_name', 'Не указано')
+        phone = data.get('phone', 'Не указано')
+        address = data.get('address', 'Не указано')
+        items = data.get('items', [])
+        total = data.get('total_price', 0)
+
+        # Поскольку заказ с сайта, user_id ставим 0 (или None)
+        order_id = db.add_order(0, name, phone, address, items, total)
+
+        # Отправляем уведомление админу в Telegram
+        bot = request.app['bot']
+        if settings.ADMIN_ID:
+            admin_msg = (
+                f"🌐 <b>НОВЫЙ ЗАКАЗ С САЙТА №{order_id}</b>\n"
+                f"──────────────────\n"
+                f"👤 Клиент: {name}\n"
+                f"📞 Тел: <code>{phone}</code>\n"
+                f"📍 Адрес: {address}\n"
+                "──────────────────\n"
+                "📦 <b>Состав заказа:</b>\n"
+            )
+            for i in items:
+                size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
+                admin_msg += f"- {i['name']} {size_info} x{i['qty']} — {i['price']:,.0f} UZS\n"
+            
+            admin_msg += f"\n💰 <b>Сумма к оплате: {total:,.0f} UZS</b>"
+
+            await bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode="HTML")
+
+        return web.json_response({"status": "ok", "order_id": order_id})
+    except Exception as e:
+        log.error(f"Order API error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
 async def serve_index(request):
     try:
         with open("index.html", "r", encoding="utf-8") as f:
@@ -289,6 +327,7 @@ async def cmd_orders(m: Message):
         text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
 
+# Оставляем старый метод для совместимости, если кто-то отправит через внутренний WebAppData
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -373,20 +412,24 @@ async def process_finish(m: Message, state: FSMContext):
     await state.clear()
 
 async def main():
+    bot = Bot(token=settings.BOT_TOKEN)
+    dp = Dispatcher(storage=MemoryStorage())
+
     app = web.Application(client_max_size=1024**2*20)
+    # Сохраняем инстанс бота внутри контекста веб-сервера, чтобы роуты имели к нему доступ
+    app['bot'] = bot 
+
     app.router.add_get("/", serve_index)
     app.router.add_get("/api/products", api_get_products)
     app.router.add_post("/api/products", api_save_product)
     app.router.add_delete("/api/products/{id}", api_delete_product)
     app.router.add_post("/api/stock", api_toggle_stock)
     app.router.add_post("/api/size", api_toggle_size)
+    app.router.add_post("/api/orders", api_create_order) # Новый роут для обработки веб-заказов
     
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', settings.PORT).start()
-    
-    bot = Bot(token=settings.BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
     
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(cmd_help, Command("help"))
