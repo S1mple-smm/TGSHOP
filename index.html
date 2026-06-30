@@ -13,16 +13,12 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .swiper-pagination-bullet-active { background-color: #000 !important; }
         input:focus { font-size: 16px; } 
-        
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        
-        /* Стили для таблицы размеров */
         .size-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; background: white; }
         .size-table th, .size-table td { border: 1px solid #e5e7eb; padding: 10px 4px; text-align: center; }
         .size-table th { background-color: #f3f4f6; color: #374151; font-weight: 700; text-transform: uppercase; }
         .size-table tr:nth-child(even) { background-color: #f9fafb; }
 
-        /* Адаптивное окно продукта (Мобилка = Modal, ПК = Full Page) */
         .product-view {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -48,19 +44,14 @@
                 pointer-events: none;
                 transition: all 0.3s ease;
                 overflow-y: auto;
-                display: block; /* Снимаем flex чтобы скроллилась вся страница */
+                display: block;
             }
-            .product-view.open {
-                transform: translateY(0);
-                opacity: 1;
-                pointer-events: auto;
-            }
+            .product-view.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
         }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
 
-    <!-- Навигация -->
     <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all">
         <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1 max-w-6xl mx-auto w-full" onclick="window.scrollTo(0,0)">
             <div class="flex-1">KOS <span class="text-blue-600">SPORT</span></div>
@@ -77,7 +68,6 @@
         </div>
     </nav>
 
-    <!-- Главная страница (Каталог) -->
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[60px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
             <button onclick="filter('All')" class="cat-btn bg-black text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-sm">Все</button>
@@ -89,18 +79,12 @@
         <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"></div>
     </main>
 
-    <!-- Затенение для мобилок -->
     <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden md:hidden transition-opacity" onclick="closeProduct()"></div>
 
-    <!-- СТРАНИЦА ПРОДУКТА (Adaptive: Sheet on Mobile, Full Page on Desktop) -->
     <div id="productView" class="product-view shadow-[0_-5px_40px_rgba(0,0,0,0.3)] md:shadow-none">
-        
-        <!-- Ползунок закрытия для мобильных -->
         <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="closeProduct()">
             <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
-
-        <!-- Шапка для ПК (Кнопка Назад) -->
         <div class="hidden md:flex items-center justify-between p-4 px-8 bg-white border-b sticky top-0 z-20">
             <div class="max-w-6xl mx-auto w-full">
                 <button onclick="closeProduct()" class="flex items-center gap-2 text-gray-600 hover:text-black font-bold transition-colors">
@@ -108,12 +92,8 @@
                 </button>
             </div>
         </div>
-
-        <!-- Контент продукта -->
         <div class="flex-1 overflow-y-auto md:overflow-visible pb-24 md:pb-10">
             <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12">
-                
-                <!-- ЛЕВАЯ ЧАСТЬ: Фотографии -->
                 <div class="w-full relative">
                     <button onclick="closeProduct()" class="md:hidden absolute top-4 right-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm active:scale-90">
                         <i class="fas fa-times text-gray-600"></i>
@@ -123,44 +103,23 @@
                         <div class="swiper-pagination"></div>
                     </div>
                 </div>
-
-                <!-- ПРАВАЯ ЧАСТЬ: Детали товара -->
                 <div class="p-5 md:p-0 flex flex-col justify-center">
-                    
-                    <!-- Бейджи (Как на фото) -->
                     <div class="flex gap-2 mb-3">
                         <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold uppercase" id="mCategory"></span>
                         <span class="bg-green-50 text-green-600 px-2 py-1 rounded text-xs font-bold uppercase hidden md:inline-block">В наличии</span>
                     </div>
-
-                    <!-- Название и Цена -->
                     <h1 id="mName" class="text-2xl md:text-3xl font-black text-gray-900 leading-tight mb-2"></h1>
                     <div id="mPrice" class="text-2xl md:text-3xl font-bold text-gray-900 mb-6"></div>
-
-                    <!-- Выбор размера -->
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-500 mb-3">Размер</label>
                         <div id="mSizes" class="flex flex-wrap gap-2 mb-2"></div>
                         <p class="text-xs text-gray-400 mt-1" id="sizeHelper">Выберите размер</p>
                     </div>
-
-                    <!-- Инфо панель (Как на фото) -->
                     <div class="hidden md:flex justify-between items-center bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-8">
-                        <div class="flex items-center gap-3">
-                            <i class="fas fa-trophy text-green-500 text-xl"></i>
-                            <span class="text-xs font-medium text-gray-700 leading-tight">Профессиональная<br>экипировка</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <i class="fas fa-sync-alt text-green-500 text-xl"></i>
-                            <span class="text-xs font-medium text-gray-700">Обмен и возврат</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <i class="fab fa-telegram-plane text-green-500 text-xl"></i>
-                            <span class="text-xs font-medium text-gray-700 leading-tight">Поддержка в<br>Telegram</span>
-                        </div>
+                        <div class="flex items-center gap-3"><i class="fas fa-trophy text-green-500 text-xl"></i><span class="text-xs font-medium text-gray-700 leading-tight">Профессиональная<br>экипировка</span></div>
+                        <div class="flex items-center gap-3"><i class="fas fa-sync-alt text-green-500 text-xl"></i><span class="text-xs font-medium text-gray-700">Обмен и возврат</span></div>
+                        <div class="flex items-center gap-3"><i class="fab fa-telegram-plane text-green-500 text-xl"></i><span class="text-xs font-medium text-gray-700 leading-tight">Поддержка в<br>Telegram</span></div>
                     </div>
-
-                    <!-- Действия (На ПК тут, на мобилке fixed bottom) -->
                     <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50">
                         <div class="flex items-center border border-gray-200 rounded-xl h-14 md:h-14 bg-gray-50 shrink-0">
                             <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-gray-500 active:bg-gray-200 rounded-l-xl">-</button>
@@ -171,14 +130,10 @@
                             <span>В корзину</span>
                         </button>
                     </div>
-
-                    <!-- Описание -->
                     <div class="mt-6 md:mt-8 mb-4">
                         <h3 class="font-bold text-gray-900 text-base mb-2">Описание</h3>
                         <p id="mDesc" class="text-gray-600 text-sm leading-relaxed"></p>
                     </div>
-
-                    <!-- Таблица размеров -->
                     <div class="mt-4 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
                         <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-4 text-sm font-bold text-gray-900 uppercase active:bg-gray-100 transition-colors">
                             <span class="flex items-center gap-2"><i class="fas fa-ruler-combined"></i> Таблица размеров</span>
@@ -186,13 +141,11 @@
                         </button>
                         <div id="sizeChartContainer" class="hidden px-4 pb-4 pt-0 border-t border-gray-200 overflow-x-auto"></div>
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- КОРЗИНА -->
     <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-[60] hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-5 border-b flex justify-between items-center bg-gray-50">
@@ -205,28 +158,50 @@
                 <span class="text-gray-500 font-medium text-sm">Итого к оплате</span>
                 <span id="cartTotal" class="text-xl font-black text-gray-900">0 сум</span>
             </div>
-            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">
-                Оформить заказ
+            <button onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">
+                Перейти к оформлению
             </button>
         </div>
     </div>
 
-    <!-- АДМИН ПАНЕЛЬ -->
+    <div id="checkoutModal" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-black text-base uppercase tracking-tight text-gray-900">Данные доставки</h3>
+                <button onclick="closeCheckoutModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <form id="orderForm" onsubmit="sendOrder(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ваше имя</label>
+                    <input type="text" id="orderName" required placeholder="Иван Иванов" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Телефон номер</label>
+                    <input type="tel" id="orderPhone" required placeholder="+998 (XX) XXX-XX-XX" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Адрес доставки</label>
+                    <textarea id="orderAddress" required placeholder="Город, улица, дом, ориентир..." class="w-full border p-3 rounded-xl text-sm h-20 outline-none resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></textarea>
+                </div>
+                <button type="submit" id="submitOrderBtn" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold uppercase shadow-md hover:bg-green-700 transition-colors mt-2">
+                    Подтвердить заказ
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4 md:p-8">
         <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
             <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white sticky top-0 z-10">
                 <h2 class="font-bold flex items-center gap-2"><i class="fas fa-database"></i> Панель управления</h2>
                 <button onclick="closeAdmin()" class="text-xs bg-gray-700 px-3 py-1.5 rounded hover:bg-gray-600 transition-colors">Закрыть</button>
             </div>
-            
             <div class="p-4 space-y-6 md:flex md:gap-6 md:space-y-0">
                 <form id="addForm" class="space-y-4 md:w-1/2">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm transition-all" id="formWrapper">
                         <h3 id="formTitle" class="font-bold text-blue-800 mb-3 text-sm uppercase">Новый товар</h3>
-                        
                         <div class="space-y-3">
                             <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
-                            
                             <div class="grid grid-cols-2 gap-3">
                                 <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
                                 <select id="aCat" class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none focus:border-blue-500">
@@ -237,33 +212,26 @@
                                     <option value="Accessories">Аксессуары</option>
                                 </select>
                             </div>
-
                             <textarea id="aDesc" placeholder="Описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none focus:border-blue-500"></textarea>
-
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1">Фотографии (Макс 10)</label>
                                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
                                     <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
-                                    <div class="text-gray-400 text-xs font-bold pointer-events-none">
-                                        <i class="fas fa-camera text-xl mb-1 block"></i> Нажмите для выбора
-                                    </div>
+                                    <div class="text-gray-400 text-xs font-bold pointer-events-none"><i class="fas fa-camera text-xl mb-1 block"></i> Нажмите для выбора</div>
                                 </div>
                                 <div id="photoPreviewContainer" class="grid grid-cols-4 gap-2 mt-2"></div>
                             </div>
-
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1">Размерная таблица</label>
                                 <textarea id="aSizeChartText" class="w-full border-gray-200 border p-3 rounded-lg text-sm h-24 outline-none resize-none font-mono text-xs whitespace-pre bg-gray-50" placeholder="Выберите категорию для автозаполнения"></textarea>
                             </div>
                         </div>
-
                         <div class="flex gap-2 mt-4">
                             <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-blue-700">СОХРАНИТЬ В БАЗУ</button>
                             <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-gray-400 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-gray-500">ОТМЕНА</button>
                         </div>
                     </div>
                 </form>
-
                 <div class="md:w-1/2 md:border-l md:border-gray-200 md:pl-6 md:max-h-[75vh] md:overflow-y-auto hide-scrollbar">
                     <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1 sticky top-0 bg-white z-10 py-2">Управление товарами</h3>
                     <div id="adminList" class="space-y-3"></div>
@@ -272,12 +240,10 @@
         </div>
     </div>
 
-    <!-- JS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram?.WebApp || null;
+        if(tg) { tg.expand(); }
 
         let products = [];
         let cart = [];
@@ -291,15 +257,15 @@
         let editProductId = null;
         let originalSizes = null;
 
-        // Поиск
         document.addEventListener('click', (e) => {
-            const searchContainer = document.getElementById('searchInput').parentElement;
-            if (!searchContainer.contains(e.target) && document.activeElement === document.getElementById('searchInput')) {
-                document.getElementById('searchInput').blur();
+            const searchInput = document.getElementById('searchInput');
+            if(!searchInput) return;
+            const searchContainer = searchInput.parentElement;
+            if (!searchContainer.contains(e.target) && document.activeElement === searchInput) {
+                searchInput.blur();
             }
         });
 
-        // Открытие/закрытие таблицы
         function toggleSizeChart() {
             const container = document.getElementById('sizeChartContainer');
             const arrow = document.getElementById('sizeChartArrow');
@@ -307,7 +273,6 @@
             arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
-        // Автозаполнение
         document.getElementById('aCat').addEventListener('change', function() {
             const textArea = document.getElementById('aSizeChartText');
             if (this.value === 'Apparel') {
@@ -319,7 +284,6 @@
             } else { textArea.value = ""; }
         });
 
-        // API
         async function loadProducts() {
             try {
                 const res = await fetch('/api/products');
@@ -408,7 +372,6 @@
             renderAdminList();
         }
 
-        // РЕНДЕР КАТАЛОГА
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
             if(items.length === 0) { grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 text-sm">Товаров пока нет</div>'; return; }
@@ -427,7 +390,6 @@
             `).join('');
         }
 
-        // ОТКРЫТИЕ СТРАНИЦЫ ТОВАРА
         function openProduct(id) {
             currentProduct = products.find(p => p.id === id);
             if(!currentProduct) return;
@@ -468,7 +430,6 @@
             
             sizesContainer.innerHTML = sortedSizes.map(s => {
                 const avail = currentProduct.sizes[s];
-                // Квадратные кнопки (как на фото)
                 return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg w-12 h-12 flex items-center justify-center text-sm font-medium transition-all hover:border-black ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50 hover:border-gray-200' : 'bg-white text-gray-700'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
@@ -522,16 +483,17 @@
 
         function addToCart() {
             if(!selectedSize) { 
-                try { tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
-                document.getElementById('sizeHelper').innerText = 'Пожалуйста, выберите размер!';
-                document.getElementById('sizeHelper').classList.replace('text-gray-400', 'text-red-500');
-                document.getElementById('sizeHelper').classList.replace('text-green-600', 'text-red-500');
+                try { tg?.HapticFeedback.notificationOccurred('error'); } catch(e){}
+                const sh = document.getElementById('sizeHelper');
+                sh.innerText = 'Пожалуйста, выберите размер!';
+                sh.classList.replace('text-gray-400', 'text-red-500');
+                sh.classList.replace('text-green-600', 'text-red-500');
                 return; 
             }
             cart.push({ ...currentProduct, cartId: Date.now(), selectedSize, qty });
             closeProduct();
             updateCart();
-            try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+            try { tg?.HapticFeedback.notificationOccurred('success'); } catch(e){}
         }
 
         function updateCart() {
@@ -568,23 +530,75 @@
                     </div>
                 `).join('');
             }
-
-            if (total > 0) {
-                tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
-                tg.MainButton.show();
-            } else { tg.MainButton.hide(); }
         }
 
         function removeFromCart(idx) { cart.splice(idx, 1); updateCart(); }
 
-        function sendOrder() {
-            if(cart.length === 0) return;
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            const data = { total_price: total, items: cart.map(i => ({ name: i.name, price: i.price, qty: i.qty, size: i.selectedSize })) };
-            tg.sendData(JSON.stringify(data));
+        // Функции модального окна оформления заказа для сайта
+        function openCheckoutModal() {
+            if(cart.length === 0) { alert('Ваша корзина пуста'); return; }
+            document.getElementById('checkoutModal').classList.remove('hidden');
         }
-        
-        tg.onEvent('mainButtonClicked', sendOrder);
+
+        function closeCheckoutModal() {
+            document.getElementById('checkoutModal').classList.add('hidden');
+        }
+
+        // ОТПРАВКА ЗАКАЗА НА СЕРВЕР ЧЕРЕЗ API (Работает везде: и в Telegram Mini App, и на ПК/Телефоне в обычном браузере!)
+        async function sendOrder(event) {
+            if(event) event.preventDefault();
+            if(cart.length === 0) return;
+
+            const name = document.getElementById('orderName').value;
+            const phone = document.getElementById('orderPhone').value;
+            const address = document.getElementById('orderAddress').value;
+
+            const submitBtn = document.getElementById('submitOrderBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Оформление...';
+
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            
+            // Собираем объект заказа для бэкенда
+            const orderData = {
+                user_name: name,
+                phone: phone,
+                address: address,
+                total_price: total,
+                items: cart.map(i => ({
+                    name: i.name,
+                    price: i.price,
+                    qty: i.qty,
+                    size: i.selectedSize
+                }))
+            };
+
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                const result = await response.json();
+                if(result.status === 'ok') {
+                    alert(`Заказ №${result.order_id} успешно оформлен! Менеджер свяжется с вами.`);
+                    cart = [];
+                    updateCart();
+                    closeCheckoutModal();
+                    toggleCart();
+                    document.getElementById('orderForm').reset();
+                } else {
+                    alert('Ошибка при оформлении заказа: ' + result.msg);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Произошла ошибка связи с сервером.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Подтвердить заказ';
+            }
+        }
 
         // --- ADMIN Скрипты ---
         document.getElementById('searchInput').addEventListener('input', (e) => {
