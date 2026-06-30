@@ -240,8 +240,9 @@
                 <span class="text-slate-400 font-semibold text-xs uppercase tracking-wider">Итого к оплате</span>
                 <span id="cartTotal" class="text-lg font-black text-slate-900">0 сум</span>
             </div>
-            <button id="checkoutBtn" onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors">
-                Перейти к оформлению
+            <!-- Кнопка оформления теперь ВСЕГДА отображается внутри корзины -->
+            <button id="checkoutBtn" onclick="handleCheckoutClick()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors">
+                Оформить заказ
             </button>
         </div>
     </div>
@@ -341,8 +342,6 @@
 
         if (isTelegram) {
             tg.expand();
-            // Навешиваем обработчик на нажатие встроенной Main Button от Telegram
-            tg.onEvent('mainButtonClicked', sendOrderTelegram);
         }
 
         // Резервный обработчик на случай блокировки прямого встраивания из Google Photos
@@ -669,19 +668,14 @@
                 }).join('');
             }
 
-            // Настройка отображения кнопок оформления (TMA против обычного Браузера)
-            if (isTelegram) {
-                // Если мы в Telegram, скрываем стандартную кнопку сайта и активируем встроенную Main Button
-                document.getElementById('checkoutBtn').style.display = 'none';
-                if (total > 0) {
-                    tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
-                    tg.MainButton.show();
-                } else {
-                    tg.MainButton.hide();
-                }
+            // Управление активностью кнопки оформления заказа в корзине
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            if (total > 0) {
+                checkoutBtn.removeAttribute('disabled');
+                checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
-                // Если мы в браузере, показываем обычную кнопку сайта
-                document.getElementById('checkoutBtn').style.display = 'block';
+                checkoutBtn.setAttribute('disabled', 'true');
+                checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
         }
 
@@ -697,6 +691,16 @@
 
         function closeCheckoutModal() {
             document.getElementById('checkoutModal').classList.add('hidden');
+        }
+
+        // Клик по кнопке оформления внутри корзины
+        function handleCheckoutClick() {
+            if (cart.length === 0) return;
+            if (isTelegram) {
+                sendOrderTelegram();
+            } else {
+                openCheckoutModal();
+            }
         }
 
         // Вызывается для пользователей, открывших магазин вне Telegram (на обычном сайте)
@@ -995,7 +999,15 @@
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
         }
         
-        document.addEventListener('DOMContentLoaded', loadProducts);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            if (isTelegram) {
+                checkoutBtn.innerText = 'Оформить заказ';
+            } else {
+                checkoutBtn.innerText = 'Перейти к оформлению';
+            }
+        });
     </script>
 </body>
 </html>
