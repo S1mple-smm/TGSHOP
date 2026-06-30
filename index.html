@@ -717,6 +717,36 @@
         function closeCheckoutModal() {
             document.getElementById('checkoutModal').classList.add('hidden');
         }
+
+        // Вызывается во встроенной сессии Telegram Mini App (направляет данные в FSM бота)
+        function sendOrderTelegram() {
+            if(cart.length === 0) return;
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const data = { 
+                total_price: total, 
+                items: cart.map(i => ({ 
+                    name: i.name, 
+                    price: i.price, 
+                    qty: i.qty 
+                })) 
+            };
+            
+            // Пытаемся отправить данные через внутренний механизм Telegram
+            try {
+                if (tg && tg.sendData) {
+                    tg.sendData(JSON.stringify(data));
+                } else {
+                    // Если sendData недоступен (например, открыли по прямой ссылке), 
+                    // открываем обычное окно оформления заказа, чтобы клиент не потерял корзину.
+                    showToast('Функция быстрой отправки недоступна. Пожалуйста, заполните форму вручную.');
+                    openCheckoutModal();
+                }
+            } catch (error) {
+                console.error("Ошибка при отправке данных в Telegram:", error);
+                showToast('Ошибка при взаимодействии с Telegram. Открываем форму заказа.');
+                openCheckoutModal();
+            }
+        }
         
         function translateCat(c) { 
             const map={'Peripherals':'Периферия','Cameras':'Видеонаблюдение','Network':'Сетевое оборудование'}; 
