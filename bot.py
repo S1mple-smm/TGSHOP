@@ -118,7 +118,6 @@ class DBManager:
                 conn.close()
 
         # Автоматическая миграция (добавление колонки rating в таблицу products, если она старая)
-        # Выполняем в полностью изолированной транзакции
         conn = self.get_conn()
         cur = conn.cursor()
         try:
@@ -126,7 +125,6 @@ class DBManager:
             conn.commit()
             log.info("✅ Колонка 'rating' успешно интегрирована в структуру таблицы 'products'.")
         except Exception:
-            # Если колонка уже существует, PostgreSQL вернет ошибку. Мы её просто логируем и откатываем транзакцию.
             conn.rollback()
             log.info("ℹ️ Структура таблицы 'products' актуальна (колонка 'rating' уже присутствует).")
         finally:
@@ -151,16 +149,27 @@ class DBManager:
                 if isinstance(images, str): 
                     images = json.loads(images)
                 
+                # Если в базе лежат пустые или некорректные изображения, защищаем фронтенд от падения
+                if not images or not isinstance(images, list):
+                    images = ["https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&q=80"]
+                
+                # КРИТИЧЕСКИ ВАЖНО: Принудительное преобразование Decimal (из PostgreSQL AVG) и Float в Python float.
+                # Это полностью предотвращает ошибку "Decimal is not JSON serializable".
+                price = float(r['price']) if r['price'] is not None else 0.0
+                rating = float(r['calculated_rating']) if r['calculated_rating'] is not None else 5.0
+                reviews_count = int(r['reviews_count']) if r['reviews_count'] is not None else 0
+                is_available = bool(r['is_available']) if r['is_available'] is not None else True
+
                 res.append({
                     "id": r['id'], 
                     "name": r['name'], 
-                    "price": r['price'],
+                    "price": price,
                     "description": r['description'], 
                     "category": r['category'],
                     "images": images, 
-                    "isAvailable": bool(r['is_available']),
-                    "rating": r['calculated_rating'],
-                    "reviews_count": r['reviews_count']
+                    "isAvailable": is_available,
+                    "rating": rating,
+                    "reviews_count": reviews_count
                 })
             return res
         finally:
@@ -252,7 +261,7 @@ class DBManager:
                     "id": r['id'],
                     "product_id": r['product_id'],
                     "user_name": r['user_name'],
-                    "rating": r['rating'],
+                    "rating": int(r['rating']) if r['rating'] is not None else 5,
                     "review_text": r['review_text'],
                     "created_at": str(r['created_at'])
                 })
@@ -295,7 +304,11 @@ class DBManager:
             rows = cur.fetchall()
             orders = []
             for r in rows:
-                orders.append({"id": r['id'], "total": r['total'], "created_at": r['created_at']})
+                orders.append({
+                    "id": r['id'], 
+                    "total": float(r['total']) if r['total'] is not None else 0.0, 
+                    "created_at": str(r['created_at'])
+                })
             return orders
         finally:
             conn.close()
@@ -368,7 +381,6 @@ async def api_create_order(request):
 
         order_id = db.add_order(0, name, phone, address, items, total)
 
-        # Безопасное отправление уведомления в Telegram админу
         try:
             bot = request.app['bot']
             if settings.ADMIN_ID:
