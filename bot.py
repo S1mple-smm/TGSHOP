@@ -15,7 +15,7 @@ except ImportError:
 
 load_dotenv()
 
-# --- 1. НАСТРОЙКИ (Больше не нужен config.py!) ---
+# --- 1. НАСТРОЙКИ ---
 class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     ADMIN_ID = os.getenv("ADMIN_ID")
@@ -55,7 +55,7 @@ class DBManager:
     def get_conn(self):
         if self.is_pg:
             return psycopg2.connect(settings.DATABASE_URL, cursor_factory=RealDictCursor)
-        conn = sqlite3.connect("orders.db")
+        conn = sqlite3.connect("weisi_orders.db")
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -66,6 +66,7 @@ class DBManager:
         id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
         json_type = "JSONB" if self.is_pg else "TEXT"
 
+        # Таблица продуктов (БЕЗ РАЗМЕРОВ)
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
@@ -74,12 +75,11 @@ class DBManager:
                 description TEXT,
                 category TEXT,
                 images {json_type},
-                sizes {json_type},
-                is_available INTEGER DEFAULT 1,
-                size_chart TEXT
+                is_available INTEGER DEFAULT 1
             )
         """)
         
+        # Таблица заказов (БЕЗ РАЗМЕРОВ)
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS orders (
                 id {id_serial},
@@ -92,26 +92,55 @@ class DBManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # НОВАЯ Таблица отзывов и оценок
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS reviews (
+                id {id_serial},
+                product_id TEXT,
+                user_name TEXT,
+                rating INTEGER,
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
         conn.close()
 
     def get_products(self):
         conn = self.get_conn()
         cur = conn.cursor()
+        
+        # Получаем продукты
         cur.execute("SELECT * FROM products")
         rows = cur.fetchall()
+        
         res = []
         for r in rows:
             images = r['images']
-            sizes = r['sizes']
-            if isinstance(images, str): images = json.loads(images)
-            if isinstance(sizes, str): sizes = json.loads(sizes)
+            if isinstance(images, str): 
+                images = json.loads(images)
             
+            # Подсчитываем отзывы и средний рейтинг для каждого товара в один проход
+            pid = r['id']
+            ph = "%s" if self.is_pg else "?"
+            cur.execute(f"SELECT rating FROM reviews WHERE product_id={ph}", (pid,))
+            review_rows = cur.fetchall()
+            
+            ratings = [rev['rating'] if isinstance(rev, dict) else rev[0] for rev in review_rows]
+            avg_rating = sum(ratings) / len(ratings) if ratings else 0.0
+            reviews_count = len(ratings)
+
             res.append({
-                "id": r['id'], "name": r['name'], "price": r['price'],
-                "description": r['description'], "category": r['category'],
-                "images": images, "sizes": sizes,
-                "isAvailable": bool(r['is_available']), "sizeChart": r['size_chart']
+                "id": r['id'], 
+                "name": r['name'], 
+                "price": r['price'],
+                "description": r['description'], 
+                "category": r['category'],
+                "images": images, 
+                "isAvailable": bool(r['is_available']),
+                "avgRating": avg_rating,
+                "reviewsCount": reviews_count
             })
         conn.close()
         return res
@@ -122,24 +151,21 @@ class DBManager:
         ph = "%s" if self.is_pg else "?"
         
         images_json = json.dumps(p['images'])
-        sizes_json = json.dumps(p['sizes'])
         
         if self.is_pg:
             sql = f"""
-                INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                INSERT INTO products (id, name, price, description, category, images, is_available)
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
                 ON CONFLICT (id) DO UPDATE SET 
                 name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
-                category=EXCLUDED.category, images=EXCLUDED.images, sizes=EXCLUDED.sizes,
-                is_available=EXCLUDED.is_available, size_chart=EXCLUDED.size_chart
+                category=EXCLUDED.category, images=EXCLUDED.images, is_available=EXCLUDED.is_available
             """
         else:
-            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
+            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})"
             
         cur.execute(sql, (
             p['id'], p['name'], p['price'], p.get('description', ''), 
-            p['category'], images_json, sizes_json, 
-            int(p['isAvailable']), p.get('sizeChart', '')
+            p['category'], images_json, int(p['isAvailable'])
         ))
         conn.commit()
         conn.close()
@@ -149,6 +175,8 @@ class DBManager:
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
         cur.execute(f"DELETE FROM products WHERE id={ph}", (pid,))
+        # Удаляем также связанные отзывы
+        cur.execute(f"DELETE FROM reviews WHERE product_id={ph}", (pid,))
         conn.commit()
         conn.close()
     
@@ -160,44 +188,56 @@ class DBManager:
         conn.commit()
         conn.close()
 
-    def toggle_size_stock(self, pid, size, status):
-        conn = self.get_conn()
-        cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
-        cur.execute(f"SELECT sizes FROM products WHERE id={ph}", (pid,))
-        row = cur.fetchone()
-        if row:
-            current_sizes = row['sizes']
-            if isinstance(current_sizes, str): current_sizes = json.loads(current_sizes)
-            elif hasattr(current_sizes, 'copy'): current_sizes = current_sizes.copy()
-            
-            if not isinstance(current_sizes, dict): current_sizes = {}
-            current_sizes[size] = status
-            new_json = json.dumps(current_sizes)
-            
-            cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
-            conn.commit()
-        conn.close()
-
     def add_order(self, uid, uname, phone, addr, items, total):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
         items_json = json.dumps(items)
+        db_uid = None if uid == 0 else uid
         
         if self.is_pg:
             cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph}) RETURNING id", 
-                       (uid, uname, phone, addr, items_json, total))
-            oid = cur.fetchone()['id']
+                       (db_uid, uname, phone, addr, items_json, total))
+            row = cur.fetchone()
+            oid = row['id'] if isinstance(row, dict) else row[0]
         else:
             cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph})", 
-                       (uid, uname, phone, addr, items_json, total))
+                       (db_uid, uname, phone, addr, items_json, total))
             oid = cur.lastrowid
             
         conn.commit()
         conn.close()
         return oid
     
+    def add_review(self, product_id, user_name, rating, comment):
+        conn = self.get_conn()
+        cur = conn.cursor()
+        ph = "%s" if self.is_pg else "?"
+        
+        cur.execute(f"INSERT INTO reviews (product_id, user_name, rating, comment) VALUES ({ph},{ph},{ph},{ph})", 
+                   (product_id, user_name, int(rating), comment))
+        conn.commit()
+        conn.close()
+
+    def get_reviews(self, product_id):
+        conn = self.get_conn()
+        cur = conn.cursor()
+        ph = "%s" if self.is_pg else "?"
+        cur.execute(f"SELECT * FROM reviews WHERE product_id={ph} ORDER BY created_at DESC", (product_id,))
+        rows = cur.fetchall()
+        reviews = []
+        for r in rows:
+            reviews.append({
+                "id": r['id'],
+                "product_id": r['product_id'],
+                "user_name": r['user_name'],
+                "rating": r['rating'],
+                "comment": r['comment'],
+                "created_at": str(r['created_at'])
+            })
+        conn.close()
+        return reviews
+
     def list_user_orders(self, uid, limit=5):
         conn = self.get_conn()
         cur = conn.cursor()
@@ -235,10 +275,59 @@ async def api_toggle_stock(request):
     db.toggle_stock(data['id'], data['status'])
     return web.json_response({"status": "ok"})
 
-async def api_toggle_size(request):
-    data = await request.json()
-    db.toggle_size_stock(data['id'], data['size'], data['status'])
-    return web.json_response({"status": "ok"})
+async def api_get_reviews(request):
+    pid = request.match_info['product_id']
+    return web.json_response(db.get_reviews(pid))
+
+async def api_post_review(request):
+    try:
+        pid = request.match_info['product_id']
+        data = await request.json()
+        db.add_review(pid, data['user_name'], data['rating'], data['comment'])
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        log.error(f"Review API error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
+async def api_create_order(request):
+    try:
+        data = await request.json()
+        name = data.get('user_name', 'Не указано')
+        phone = data.get('phone', 'Не указано')
+        address = data.get('address', 'Не указано')
+        items = data.get('items', [])
+        total = data.get('total_price', 0)
+
+        order_id = db.add_order(0, name, phone, address, items, total)
+
+        # Отправка уведомления администратору в Telegram
+        try:
+            bot = request.app['bot']
+            if settings.ADMIN_ID:
+                admin_msg = (
+                    f"🌐 <b>WEISI — НОВЫЙ ЗАКАЗ С САЙТА №{order_id}</b>\n"
+                    f"──────────────────\n"
+                    f"👤 Клиент: {name}\n"
+                    f"📞 Тел: <code>{phone}</code>\n"
+                    f"📍 Адрес: {address}\n"
+                    "──────────────────\n"
+                    "📦 <b>Состав заказа:</b>\n"
+                )
+                for i in items:
+                    admin_msg += f"- {i['name']} x{i['qty']} — {i['price']:,.0f} UZS\n"
+                
+                admin_msg += f"\n💰 <b>Сумма к оплате: {total:,.0f} UZS</b>"
+
+                await bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode="HTML")
+            else:
+                log.warning("⚠️ Заказ сохранен, но ADMIN_ID не настроен!")
+        except Exception as telegram_error:
+            log.error(f"❌ Ошибка уведомления в Telegram: {telegram_error}")
+
+        return web.json_response({"status": "ok", "order_id": order_id})
+    except Exception as e:
+        log.error(f"Order API error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 async def serve_index(request):
     try:
@@ -262,33 +351,34 @@ class OrderFlow(StatesGroup):
 
 def main_kb():
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
+        keyboard=[[KeyboardButton(text="🛒 Магазин WEISI", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
         resize_keyboard=True,
         input_field_placeholder="Нажмите кнопку ниже 👇"
     )
 
 def contact_kb():
-    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📱 Отправить мой номер", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📱 Отправить контакт", request_contact=True)]], resize_keyboard=True, one_time_keyboard=True)
 
 def location_kb():
-    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Отправить геолокацию", request_location=True)], [KeyboardButton(text="⏩ Пропустить (введу вручную)")]], resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Отправить геопозицию", request_location=True)], [KeyboardButton(text="⏩ Напишу вручную")]], resize_keyboard=True, one_time_keyboard=True)
 
 async def cmd_start(m: Message):
-    await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в KOS Sport.\nНажмите кнопку ниже, чтобы открыть каталог 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+    await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в интернет-магазин сетевого оборудования и цифровой периферии <b>WEISI</b>.\n\nНажмите кнопку ниже, чтобы перейти к каталогу товаров 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
 
 async def cmd_help(m: Message):
-    await m.answer("Команды:\n/start - Меню\n/orders - История заказов")
+    await m.answer("Доступные команды:\n/start - Главное меню\n/orders - Ваши недавние заказы")
 
 async def cmd_orders(m: Message):
     orders = db.list_user_orders(m.from_user.id)
     if not orders:
-        await m.answer("📭 У вас пока нет заказов.")
+        await m.answer("📭 У вас пока нет оформленных заказов.")
         return
-    text = "📂 <b>История заказов:</b>\n\n"
+    text = "📂 <b>История ваших заказов:</b>\n\n"
     for o in orders:
         text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
 
+# Обработка данных, если открывают через стандартное веб-приложение
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -298,51 +388,48 @@ async def on_webapp_data(m: Message, state: FSMContext):
         await state.update_data(items=items, total=total)
         await state.set_state(OrderFlow.contact)
         
-        text = "📝 <b>Ваша корзина:</b>\n\n"
+        text = "📝 <b>Ваша корзина WEISI:</b>\n\n"
         for i in items:
-            size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
-            text += f"▪️ {i['name']} {size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
+            text += f"▪️ {i['name']}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
         
-        text += f"\n💳 <b>Итого: {total:,.0f} UZS</b>"
-        text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона."
+        text += f"\n💳 <b>Итого к оплате: {total:,.0f} UZS</b>"
+        text += "\n\n📞 <b>Шаг 1/2:</b> Пожалуйста, отправьте ваш номер телефона с помощью кнопки."
         
         await m.answer(text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
     except Exception as e:
         log.error(e)
-        await m.answer("❌ Ошибка данных. Попробуйте снова.")
+        await m.answer("❌ Ошибка обработки данных. Попробуйте снова.")
 
 async def process_contact(m: Message, state: FSMContext):
     phone = m.contact.phone_number if m.contact else m.text
     await state.update_data(phone=phone, name=m.from_user.full_name)
     await state.set_state(OrderFlow.address)
     
-    await m.answer("📍 <b>Шаг 2/2:</b> Куда доставить заказ?\n\nНажмите <b>«Отправить геолокацию»</b> или напишите адрес текстом.", reply_markup=location_kb(), parse_mode=ParseMode.HTML)
+    await m.answer("📍 <b>Шаг 2/2:</b> Куда доставить заказ?\n\nОтправьте геолокацию или напишите ваш адрес текстом.", reply_markup=location_kb(), parse_mode=ParseMode.HTML)
 
 async def process_finish(m: Message, state: FSMContext):
     data = await state.get_data()
     
     if m.location:
-        addr_text = "📍 Геолокация (см. карту)"
+        addr_text = "📍 По геометке на карте"
         lat = m.location.latitude
         lon = m.location.longitude
         maps_link = f"https://maps.google.com/?q={lat},{lon}"
     else:
         addr_text = f"🏠 {m.text}"
-        lat = None
-        lon = None
-        maps_link = None
+        lat, lon, maps_link = None, None, None
     
     order_id = db.add_order(m.from_user.id, data['name'], data['phone'], addr_text, data['items'], data['total'])
     
     receipt = (
-        f"✅ <b>Заказ №{order_id} успешно оформлен!</b>\n"
+        f"✅ <b>Заказ №{order_id} в магазине WEISI успешно оформлен!</b>\n"
         "──────────────────\n"
         f"👤 <b>Заказчик:</b> {data['name']}\n"
         f"📞 <b>Телефон:</b> {data['phone']}\n"
         f"🚚 <b>Доставка:</b> {addr_text}\n"
         "──────────────────\n"
         f"💰 <b>К ОПЛАТЕ: {data['total']:,.0f} UZS</b>\n\n"
-        "<i>Менеджер свяжется с вами в ближайшее время.</i>"
+        "<i>Наш менеджер скоро свяжется с вами для подтверждения доставки!</i>"
     )
     
     await m.answer(receipt, reply_markup=main_kb(), parse_mode=ParseMode.HTML)
@@ -350,16 +437,15 @@ async def process_finish(m: Message, state: FSMContext):
     if settings.ADMIN_ID:
         try:
             admin_msg = (
-                f"🆕 <b>НОВЫЙ ЗАКАЗ №{order_id}</b>\n"
+                f"🆕 <b>НОВЫЙ ЗАКАЗ №{order_id} (WEISI)</b>\n"
                 f"👤 Клиент: <a href='tg://user?id={m.from_user.id}'>{data['name']}</a>\n"
                 f"📞 Тел: <code>{data['phone']}</code>\n"
                 f"📍 Адрес: {addr_text}\n"
-                f"🔗 Карты: {maps_link if maps_link else 'Нет'}\n\n"
+                f"🔗 Карта: {maps_link if maps_link else 'Нет'}\n\n"
                 "📦 <b>Состав:</b>\n"
             )
             for i in data['items']:
-                size_info = f"({i['size']})" if i['size'] and i['size'] != 'Standard' else ""
-                admin_msg += f"- {i['name']} {size_info} x{i['qty']}\n"
+                admin_msg += f"- {i['name']} x{i['qty']}\n"
             
             admin_msg += f"\n💰 <b>Сумма: {data['total']:,.0f} UZS</b>"
 
@@ -373,20 +459,25 @@ async def process_finish(m: Message, state: FSMContext):
     await state.clear()
 
 async def main():
+    bot = Bot(token=settings.BOT_TOKEN)
+    dp = Dispatcher(storage=MemoryStorage())
+
     app = web.Application(client_max_size=1024**2*20)
+    app['bot'] = bot 
+
+    # Маршруты сервера
     app.router.add_get("/", serve_index)
     app.router.add_get("/api/products", api_get_products)
     app.router.add_post("/api/products", api_save_product)
     app.router.add_delete("/api/products/{id}", api_delete_product)
     app.router.add_post("/api/stock", api_toggle_stock)
-    app.router.add_post("/api/size", api_toggle_size)
+    app.router.add_post("/api/orders", api_create_order)
+    app.router.add_get("/api/products/{product_id}/reviews", api_get_reviews)
+    app.router.add_post("/api/products/{product_id}/reviews", api_post_review)
     
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', settings.PORT).start()
-    
-    bot = Bot(token=settings.BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
     
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(cmd_help, Command("help"))
