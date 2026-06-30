@@ -342,6 +342,15 @@
 
         if (isTelegram) {
             tg.expand();
+            // Подготавливаем главную кнопку Telegram
+            tg.MainButton.text = "ОФОРМИТЬ ЗАКАЗ";
+            tg.MainButton.color = "#0066FF"; // Наш фирменный синий цвет
+            tg.MainButton.textColor = "#FFFFFF";
+            
+            // Обработчик нажатия на системную кнопку
+            tg.onEvent('mainButtonClicked', function() {
+                sendOrderTelegram();
+            });
         }
 
         // Резервный обработчик на случай блокировки прямого встраивания из Google Photos
@@ -645,6 +654,9 @@
 
             if(cart.length === 0) {
                 cnt.innerHTML = '<div class="text-center text-slate-400 mt-20 text-xs font-bold uppercase tracking-wider">Корзина пуста</div>';
+                if (isTelegram) {
+                    tg.MainButton.hide();
+                }
             } else {
                 cnt.innerHTML = cart.map((i, idx) => {
                     const img = i.images && i.images[0] ? i.images[0] : DEFAULT_PLACEHOLDER;
@@ -668,14 +680,27 @@
                 }).join('');
             }
 
-            // Управление активностью кнопки оформления заказа в корзине
+            // Управление активностью кнопки оформления заказа
             const checkoutBtn = document.getElementById('checkoutBtn');
             if (total > 0) {
-                checkoutBtn.removeAttribute('disabled');
-                checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                if (isTelegram) {
+                    checkoutBtn.style.display = 'none'; // Скрываем HTML кнопку
+                    // Показываем системную кнопку Telegram
+                    const panel = document.getElementById('cartPanel');
+                    if (!panel.classList.contains('translate-x-full')) {
+                        tg.MainButton.show();
+                    }
+                } else {
+                    checkoutBtn.removeAttribute('disabled');
+                    checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    checkoutBtn.style.display = 'block';
+                }
             } else {
-                checkoutBtn.setAttribute('disabled', 'true');
-                checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                if (!isTelegram) {
+                    checkoutBtn.setAttribute('disabled', 'true');
+                    checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    checkoutBtn.style.display = 'block';
+                }
             }
         }
 
@@ -692,294 +717,29 @@
         function closeCheckoutModal() {
             document.getElementById('checkoutModal').classList.add('hidden');
         }
-
-        // Клик по кнопке оформления внутри корзины
-        function handleCheckoutClick() {
-            if (cart.length === 0) return;
-            if (isTelegram) {
-                sendOrderTelegram();
-            } else {
-                openCheckoutModal();
-            }
-        }
-
-        // Вызывается для пользователей, открывших магазин вне Telegram (на обычном сайте)
-        async function sendOrder(event) {
-            if(event) event.preventDefault();
-            if(cart.length === 0) return;
-
-            const name = document.getElementById('orderName').value;
-            const phone = document.getElementById('orderPhone').value;
-            const address = document.getElementById('orderAddress').value;
-
-            const submitBtn = document.getElementById('submitOrderBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Оформление...';
-
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            
-            const orderData = {
-                user_name: name,
-                phone: phone,
-                address: address,
-                total_price: total,
-                items: cart.map(i => ({
-                    name: i.name,
-                    price: i.price,
-                    qty: i.qty
-                }))
-            };
-
-            try {
-                const response = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-
-                const result = await response.json();
-                if(result.status === 'ok') {
-                    showToast(`Заказ №${result.order_id} успешно оформлен!`);
-                    cart = [];
-                    updateCart();
-                    closeCheckoutModal();
-                    toggleCart();
-                    document.getElementById('orderForm').reset();
-                } else {
-                    showToast('Ошибка оформления: ' + result.msg);
-                }
-            } catch(e) {
-                showToast('Ошибка при связи с сервером.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Подтвердить заказ';
-            }
-        }
-
-        // Вызывается во встроенной сессии Telegram Mini App (направляет данные в FSM бота)
-        function sendOrderTelegram() {
-            if(cart.length === 0) return;
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            const data = { 
-                total_price: total, 
-                items: cart.map(i => ({ 
-                    name: i.name, 
-                    price: i.price, 
-                    qty: i.qty 
-                })) 
-            };
-            tg.sendData(JSON.stringify(data));
-        }
-
-        async function loadReviews(productId) {
-            try {
-                const res = await fetch(`/api/reviews/${productId}`);
-                const reviews = await res.json();
-                
-                document.getElementById('reviewsCountBadge').innerText = reviews.length;
-                
-                const list = document.getElementById('reviewsList');
-                if (reviews.length === 0) {
-                    list.innerHTML = '<div class="text-center text-slate-400 py-6 text-xs">Отзывов пока нет. Будьте первыми!</div>';
-                } else {
-                    list.innerHTML = reviews.map(r => {
-                        let starsHTML = '';
-                        for (let s = 1; s <= 5; s++) {
-                            starsHTML += `<i class="${s <= r.rating ? 'fas' : 'far'} fa-star text-amber-500 text-[10px]"></i>`;
-                        }
-                        const rDate = new Date(r.created_at).toLocaleDateString('ru-RU');
-                        return `
-                            <div class="border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="font-bold text-xs text-slate-900">${r.user_name}</span>
-                                    <span class="text-[9px] text-slate-400">${rDate}</span>
-                                </div>
-                                <div class="flex gap-0.5 mb-1.5">${starsHTML}</div>
-                                <p class="text-[11px] text-slate-600 leading-normal">${r.review_text}</p>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        function selectReviewStars(val) {
-            selectedStars = val;
-            const stars = document.querySelectorAll('#starSelector i');
-            stars.forEach(s => {
-                const starVal = parseInt(s.dataset.value);
-                if (starVal <= val) {
-                    s.classList.replace('far', 'fas');
-                } else {
-                    s.classList.replace('fas', 'far');
-                }
-            });
-        }
-
-        async function submitReview() {
-            const author = document.getElementById('reviewAuthor').value.trim();
-            const text = document.getElementById('reviewText').value.trim();
-            
-            if (!author || !text) {
-                showToast('Пожалуйста, заполните все поля отзыва');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/reviews', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        product_id: currentProduct.id,
-                        user_name: author,
-                        rating: selectedStars,
-                        review_text: text
-                    })
-                });
-
-                if (res.ok) {
-                    showToast('Отзыв успешно отправлен!');
-                    document.getElementById('reviewAuthor').value = '';
-                    document.getElementById('reviewText').value = '';
-                    selectReviewStars(5);
-                    
-                    await loadReviews(currentProduct.id);
-                    await loadProducts();
-                    
-                    const updated = products.find(p => p.id === currentProduct.id);
-                    if(updated) {
-                        currentProduct = updated;
-                        const ratingValue = parseFloat(currentProduct.rating || 5.0).toFixed(1);
-                        let ratingHTML = `<div class="flex text-amber-500 text-xs gap-0.5">`;
-                        for (let r = 1; r <= 5; r++) {
-                            ratingHTML += r <= Math.round(ratingValue) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
-                        }
-                        ratingHTML += `</div><span class="text-xs font-black text-slate-800">${ratingValue}</span><span class="text-xs text-slate-400">| ${currentProduct.reviews_count || 0} отзывов</span>`;
-                        document.getElementById('mRatingBlock').innerHTML = ratingHTML;
-                    }
-                } else {
-                    showToast('Ошибка при отправке отзыва');
-                }
-            } catch (e) {
-                showToast('Ошибка сети');
-            }
-        }
-
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const val = e.target.value;
-            if(val === SECRET_CODE) { 
-                openAdminPanel(); 
-                e.target.value = ''; 
-                e.target.blur(); 
-            } else { 
-                renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
-            }
-        });
-
-        document.getElementById('aPhotos').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files).slice(0, 10);
-            for (let file of files) { uploadedImages.push(await resizeImage(file)); }
-            renderPhotoPreview();
-        });
-
-        function renderPhotoPreview() {
-            const container = document.getElementById('photoPreviewContainer');
-            container.innerHTML = uploadedImages.map((img, idx) => `
-                <div class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                    <img src="${img}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
-                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
-                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        window.movePhoto = (index, direction) => {
-            const newIndex = index + direction;
-            if (newIndex >= 0 && newIndex < uploadedImages.length) {
-                [uploadedImages[index], uploadedImages[newIndex]] = [uploadedImages[newIndex], uploadedImages[index]];
-                renderPhotoPreview();
-            }
-        };
-
-        window.removePhoto = (index) => { uploadedImages.splice(index, 1); renderPhotoPreview(); };
-
-        function resizeImage(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const scale = 800 / img.width;
-                        canvas.width = 800; canvas.height = img.height * scale;
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        document.getElementById('addForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if(uploadedImages.length === 0) { showToast('Загрузите хотя бы 1 фотографию'); return; }
-
-            const prod = {
-                id: editMode ? editProductId : 'p' + Date.now(), 
-                name: document.getElementById('aName').value, 
-                price: parseFloat(document.getElementById('aPrice').value),
-                description: document.getElementById('aDesc').value, 
-                category: document.getElementById('aCat').value, 
-                images: uploadedImages,
-                isAvailable: 1
-            };
-
-            if (editMode) {
-                const existingProd = products.find(p => p.id === editProductId);
-                if (existingProd) prod.isAvailable = existingProd.isAvailable;
-            }
-            saveProduct(prod);
-        });
-
-        function renderAdminList() {
-            const list = document.getElementById('adminList');
-            list.innerHTML = products.map(p => {
-                const img = p.images && p.images[0] ? p.images[0] : DEFAULT_PLACEHOLDER;
-                return `
-                <div class="bg-white border border-slate-200 p-3 rounded-2xl mb-3 shadow-sm hover:shadow transition-shadow">
-                    <div class="flex gap-3">
-                        <img src="${img}" class="w-14 h-14 object-cover rounded-xl bg-slate-100 border border-slate-100 shrink-0" onerror="this.src='${DEFAULT_PLACEHOLDER}'">
-                        <div class="flex-1 min-w-0 pr-1">
-                            <div class="font-black text-xs truncate mb-0.5 text-slate-900" title="${p.name}">${p.name}</div>
-                            <div class="text-blue-600 font-extrabold text-xs mb-1">${formatMoney(p.price)}</div>
-                            <div class="text-[9px] text-slate-400 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
-                        </div>
-                        <div class="flex flex-col gap-1 items-end shrink-0">
-                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="w-[85px] py-1.5 rounded-lg text-[9px] font-black border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}">${p.isAvailable ? 'АКТИВЕН' : 'СКЛАД ПУСТ'}</button>
-                            <div class="flex gap-1 mt-1 w-[85px]">
-                                <button onclick="editProduct('${p.id}')" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            }).join('');
-        }
-
-        function formatMoney(n) { return new Intl.NumberFormat('ru-RU').format(n) + ' сум'; }
+        
         function translateCat(c) { 
             const map={'Peripherals':'Периферия','Cameras':'Видеонаблюдение','Network':'Сетевое оборудование'}; 
             return map[c]||c; 
         }
-        function toggleCart() { document.getElementById('cartOverlay').classList.toggle('hidden'); document.getElementById('cartPanel').classList.toggle('translate-x-full'); }
+
+        function toggleCart() { 
+            const panel = document.getElementById('cartPanel');
+            const isHidden = panel.classList.contains('translate-x-full');
+            
+            document.getElementById('cartOverlay').classList.toggle('hidden'); 
+            panel.classList.toggle('translate-x-full'); 
+            
+            if (isTelegram) {
+                // Показываем кнопку только если корзина открыта и в ней есть товары
+                if (isHidden && cart.length > 0) {
+                    tg.MainButton.show();
+                } else {
+                    tg.MainButton.hide();
+                }
+            }
+        }
+        
         function openAdminPanel() { renderAdminList(); document.getElementById('adminModal').classList.remove('hidden'); }
         function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
         
