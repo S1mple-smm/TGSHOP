@@ -240,7 +240,7 @@
                 <span class="text-slate-400 font-semibold text-xs uppercase tracking-wider">Итого к оплате</span>
                 <span id="cartTotal" class="text-lg font-black text-slate-900">0 сум</span>
             </div>
-            <button onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors">
+            <button id="checkoutBtn" onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors">
                 Перейти к оформлению
             </button>
         </div>
@@ -290,11 +290,11 @@
                         <h3 id="formTitle" class="font-black text-blue-900 mb-3 text-xs uppercase tracking-wider">Новое устройство</h3>
                         
                         <div class="space-y-3">
-                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
+                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
                             
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
-                                <select id="aCat" required class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-white outline-none focus:border-blue-500">
+                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
+                                <select id="aCat" required class="w-full border-slate-200 p-3 rounded-xl text-xs bg-white outline-none focus:border-blue-500">
                                     <option value="" disabled selected>Категория</option>
                                     <option value="Peripherals">Периферия</option>
                                     <option value="Cameras">Видеонаблюдение</option>
@@ -302,7 +302,7 @@
                                 </select>
                             </div>
 
-                            <textarea id="aDesc" placeholder="Характеристики и описание..." class="w-full border border-slate-200 p-3 rounded-xl text-xs h-24 outline-none resize-none focus:border-blue-500 bg-white"></textarea>
+                            <textarea id="aDesc" placeholder="Характеристики и описание..." class="w-full border-slate-200 p-3 rounded-xl text-xs h-24 outline-none resize-none focus:border-blue-500 bg-white"></textarea>
 
                             <div>
                                 <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">Фотографии оборудования (до 10 шт)</label>
@@ -337,7 +337,13 @@
 
     <script>
         const tg = window.Telegram?.WebApp || null;
-        if (tg) { tg.expand(); }
+        const isTelegram = !!(tg && tg.initData);
+
+        if (isTelegram) {
+            tg.expand();
+            // Навешиваем обработчик на нажатие встроенной Main Button от Telegram
+            tg.onEvent('mainButtonClicked', sendOrderTelegram);
+        }
 
         // Резервный обработчик на случай блокировки прямого встраивания из Google Photos
         function handleLogoError(img) {
@@ -396,7 +402,6 @@
                 const data = await res.json();
                 
                 if (data && data.status === 'error') {
-                    // Показываем пользователю детальный лог ошибки БД прямо на экране
                     showToast('Ошибка базы данных: ' + data.msg);
                     document.getElementById('productGrid').innerHTML = `
                         <div class="col-span-full text-center text-red-500 py-10 px-4">
@@ -656,12 +661,27 @@
                             </div>
                             <div class="flex justify-between items-center mt-2">
                                 <span class="text-blue-600 font-extrabold text-xs">${formatMoney(i.price * i.qty)}</span>
-                                <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-slate-600 font-bold">x${i.qty}</span>
+                                <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-gray-600 font-bold">x${i.qty}</span>
                             </div>
                         </div>
                     </div>
                 `;
                 }).join('');
+            }
+
+            // Настройка отображения кнопок оформления (TMA против обычного Браузера)
+            if (isTelegram) {
+                // Если мы в Telegram, скрываем стандартную кнопку сайта и активируем встроенную Main Button
+                document.getElementById('checkoutBtn').style.display = 'none';
+                if (total > 0) {
+                    tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
+                    tg.MainButton.show();
+                } else {
+                    tg.MainButton.hide();
+                }
+            } else {
+                // Если мы в браузере, показываем обычную кнопку сайта
+                document.getElementById('checkoutBtn').style.display = 'block';
             }
         }
 
@@ -679,6 +699,7 @@
             document.getElementById('checkoutModal').classList.add('hidden');
         }
 
+        // Вызывается для пользователей, открывших магазин вне Telegram (на обычном сайте)
         async function sendOrder(event) {
             if(event) event.preventDefault();
             if(cart.length === 0) return;
@@ -729,6 +750,21 @@
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Подтвердить заказ';
             }
+        }
+
+        // Вызывается во встроенной сессии Telegram Mini App (направляет данные в FSM бота)
+        function sendOrderTelegram() {
+            if(cart.length === 0) return;
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const data = { 
+                total_price: total, 
+                items: cart.map(i => ({ 
+                    name: i.name, 
+                    price: i.price, 
+                    qty: i.qty 
+                })) 
+            };
+            tg.sendData(JSON.stringify(data));
         }
 
         async function loadReviews(productId) {
