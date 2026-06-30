@@ -3,23 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WEISI — Цифровая периферия и Сети</title>
+    <title>WEISI TECH</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .swiper-pagination-bullet-active { background-color: #2563eb !important; }
-        input:focus, textarea:focus { font-size: 16px; } 
-        
+        .swiper-pagination-bullet-active { background-color: #0066FF !important; }
+        input:focus { font-size: 16px; } 
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         
-        /* Адаптивное окно товара в стиле современного маркетплейса */
         .product-view {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -47,165 +42,178 @@
                 overflow-y: auto;
                 display: block;
             }
-            .product-view.open {
-                transform: translateY(0);
-                opacity: 1;
-                pointer-events: auto;
-            }
-        }
-
-        /* Анимация появления тостов уведомлений */
-        .toast-slide {
-            animation: slideIn 0.3s forwards, slideOut 0.3s 2.7s forwards;
-        }
-        @keyframes slideIn {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateY(0); opacity: 1; }
-            to { transform: translateY(100px); opacity: 0; }
+            .product-view.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen pb-24 selection:bg-blue-100">
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-24 selection:bg-blue-100">
 
-    <!-- Тост-уведомления (Замена alert) -->
-    <div id="toastContainer" class="fixed bottom-20 left-4 right-4 z-[200] pointer-events-none flex flex-col gap-2 items-center"></div>
-
-    <!-- Кастомное модальное окно подтверждения удаления (Замена confirm) -->
-    <div id="confirmModal" class="fixed inset-0 bg-black/60 z-[110] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-full max-w-xs overflow-hidden shadow-2xl p-5 text-center">
-            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+    <!-- Кастомное окно предупреждения/подтверждения -->
+    <div id="confirmModal" class="fixed inset-0 bg-black/60 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-exclamation-triangle text-xl"></i>
             </div>
-            <h4 class="font-bold text-gray-900 mb-2">Вы уверены?</h4>
-            <p class="text-xs text-gray-500 mb-4">Это действие нельзя отменить. Товар будет удален навсегда.</p>
-            <div class="flex gap-2">
-                <button id="confirmCancelBtn" class="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors">Отмена</button>
-                <button id="confirmOkBtn" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors">Удалить</button>
+            <h3 class="font-black text-lg text-slate-900 mb-2">Удалить товар?</h3>
+            <p class="text-sm text-slate-500 mb-6">Вы действительно хотите навсегда удалить этот товар из каталога?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal(false)" class="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-colors">Отмена</button>
+                <button onclick="closeConfirmModal(true)" class="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700 transition-colors">Да, удалить</button>
             </div>
         </div>
     </div>
 
-    <!-- Шапка сайта -->
-    <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex justify-between items-center shadow-sm transition-all">
-        <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1 max-w-6xl mx-auto w-full" onclick="filter('All')">
-            <div class="flex-1 text-gray-900">WEISI <span class="text-blue-600 font-extrabold">TECH</span></div>
-            <div class="flex items-center gap-2 justify-end">
+    <!-- Уведомления вместо браузерных алертов -->
+    <div id="toastMessage" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] bg-slate-900/95 backdrop-blur-md text-white text-xs font-bold px-5 py-3.5 rounded-full shadow-xl transition-all opacity-0 pointer-events-none translate-y-4"></div>
+
+    <!-- Навигация -->
+    <nav class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-3.5 flex justify-between items-center shadow-sm">
+        <div class="font-black text-xl tracking-tighter cursor-pointer flex items-center gap-1 max-w-6xl mx-auto w-full" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+            <div class="flex-1 flex items-center gap-2">
+                <span class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-lg">WEISI</span>
+                <span class="text-slate-900 font-light tracking-wide text-sm hidden sm:inline">TECHNOLOGY</span>
+            </div>
+            <div class="flex items-center gap-3 justify-end">
                 <div class="relative">
-                    <input type="text" id="searchInput" placeholder="Поиск техники" class="bg-gray-100 border-none rounded-full py-2 px-4 text-sm w-32 focus:w-48 sm:focus:w-64 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-                    <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none"></i>
+                    <input type="text" id="searchInput" placeholder="Поиск" class="bg-slate-100 border-none rounded-full py-2 pl-4 pr-10 text-xs w-32 sm:w-48 focus:w-64 focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none">
+                    <i class="fas fa-search absolute right-3 top-2.5 text-slate-400 text-xs pointer-events-none"></i>
                 </div>
-                <button onclick="toggleCart()" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-shopping-bag text-xl text-gray-800"></i>
-                    <span id="cartBadge" class="absolute top-1 right-1 bg-blue-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
+                <button onclick="toggleCart()" class="relative p-2 active:scale-90 transition-transform">
+                    <i class="fas fa-shopping-bag text-lg text-slate-800"></i>
+                    <span id="cartBadge" class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- Главный контент -->
+    <!-- Главная страница (Каталог) -->
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
-        <!-- Горизонтальный скролл категорий -->
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[56px] z-30 bg-gray-50/95 backdrop-blur-sm py-2">
-            <button onclick="filter('All')" class="cat-btn bg-blue-600 text-white px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md transition-all">Все товары</button>
-            <button onclick="filter('Peripherals')" class="cat-btn bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">Периферия</button>
-            <button onclick="filter('Cameras')" class="cat-btn bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">Видеонаблюдение</button>
-            <button onclick="filter('Network')" class="cat-btn bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all">Сетевое оборудование</button>
+        <!-- Категории товаров -->
+        <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-1 -mx-4 px-4 sticky top-[58px] z-30 bg-slate-50/95 backdrop-blur-sm py-2">
+            <button onclick="filter('All')" class="cat-btn bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">Все устройства</button>
+            <button onclick="filter('Peripherals')" class="cat-btn bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap hover:border-slate-400">Периферия</button>
+            <button onclick="filter('Cameras')" class="cat-btn bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap hover:border-slate-400">Видеонаблюдение</button>
+            <button onclick="filter('Network')" class="cat-btn bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap hover:border-slate-400">Сетевое оборудование</button>
         </div>
-
-        <!-- Загрузчик -->
-        <div id="loader" class="flex justify-center py-20">
-            <i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i>
-        </div>
-
-        <!-- Сетка товаров в стиле Uzum -->
+        
+        <div id="loader" class="flex justify-center py-20"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i></div>
         <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"></div>
     </main>
 
-    <!-- Задний фон для мобильных модалок -->
-    <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden md:hidden transition-opacity" onclick="closeProduct()"></div>
+    <!-- Затенение для мобилок -->
+    <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-50 hidden transition-opacity" onclick="closeProduct()"></div>
 
-    <!-- КАРТОЧКА ТОВАРА (Adaptive Sheet) -->
-    <div id="productView" class="product-view shadow-[0_-5px_40px_rgba(0,0,0,0.3)] md:shadow-none">
-        <!-- Кнопка закрытия сверху (для мобилок) -->
-        <div class="md:hidden w-full flex justify-center pt-3 pb-1" onclick="closeProduct()">
-            <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+    <!-- ДЕТАЛИ ТОВАРА -->
+    <div id="productView" class="product-view shadow-[0_-5px_40px_rgba(0,0,0,0.15)] md:shadow-none">
+        
+        <!-- Ползунок закрытия для мобильных -->
+        <div class="md:hidden w-full flex justify-center pt-3 pb-1 shrink-0" onclick="closeProduct()">
+            <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
         </div>
 
-        <!-- ПК Шапка (Назад в каталог) -->
-        <div class="hidden md:flex items-center justify-between p-4 px-8 bg-white border-b sticky top-0 z-20">
+        <!-- Шапка для ПК -->
+        <div class="hidden md:flex items-center justify-between p-4 px-8 bg-white border-b sticky top-0 z-20 shrink-0">
             <div class="max-w-6xl mx-auto w-full">
-                <button onclick="closeProduct()" class="flex items-center gap-2 text-gray-600 hover:text-black font-bold transition-colors">
-                    <i class="fas fa-arrow-left"></i> Вернуться к покупкам
+                <button onclick="closeProduct()" class="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold transition-colors text-sm">
+                    <i class="fas fa-arrow-left"></i> Назад в каталог
                 </button>
             </div>
         </div>
 
-        <!-- Основное содержимое карточки -->
-        <div class="flex-1 overflow-y-auto md:overflow-visible pb-24 md:pb-10">
+        <!-- Контент продукта -->
+        <div class="flex-1 overflow-y-auto pb-24 md:pb-10">
             <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12">
                 
-                <!-- ЛЕВАЯ СТОРОНА: Слайдер картинок -->
+                <!-- ЛЕВАЯ ЧАСТЬ: Фотографии -->
                 <div class="w-full relative">
-                    <!-- Мобильная круглая кнопка закрытия -->
-                    <button onclick="closeProduct()" class="md:hidden absolute top-4 right-4 z-50 bg-white/85 backdrop-blur-sm w-10 h-10 flex items-center justify-center rounded-full shadow-md active:scale-90 border border-gray-100">
-                        <i class="fas fa-times text-gray-700"></i>
+                    <button onclick="closeProduct()" class="md:hidden absolute top-4 right-4 z-50 bg-white hover:bg-slate-100 text-slate-800 w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all">
+                        <i class="fas fa-times text-slate-600"></i>
                     </button>
-                    <div class="swiper mySwiper w-full h-[40vh] md:h-[500px] bg-white md:rounded-3xl border border-gray-100 overflow-hidden">
+                    <div class="swiper mySwiper w-full h-[45vh] md:h-[480px] bg-slate-100 md:rounded-3xl border border-slate-100 overflow-hidden">
                         <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
                         <div class="swiper-pagination"></div>
                     </div>
                 </div>
 
-                <!-- ПРАВАЯ СТОРОНА: Описание, характеристики, отзывы -->
-                <div class="p-5 md:p-0 flex flex-col">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider" id="mCategory"></span>
-                        <span class="bg-green-50 text-green-600 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Гарантия качества</span>
-                    </div>
-
-                    <h1 id="mName" class="text-xl md:text-2xl font-black text-gray-900 leading-tight mb-2"></h1>
+                <!-- ПРАВАЯ ЧАСТЬ: Информация о товаре -->
+                <div class="p-5 md:p-0 flex flex-col justify-center">
                     
-                    <!-- Оценки и отзывы -->
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="flex text-yellow-400 text-sm" id="mRatingStars"></div>
-                        <span class="text-sm font-bold text-gray-800" id="mRatingValue">0.0</span>
-                        <span class="text-xs text-gray-400" id="mReviewsCount">(0 отзывов)</span>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide" id="mCategory"></span>
+                        <span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide">Оригинал</span>
                     </div>
 
-                    <div id="mPrice" class="text-2xl md:text-3xl font-extrabold text-blue-600 mb-6"></div>
-
-                    <!-- Описание товара -->
-                    <div class="mb-6">
-                        <h3 class="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wide">Описание устройства</h3>
-                        <p id="mDesc" class="text-gray-600 text-sm leading-relaxed"></p>
+                    <h1 id="mName" class="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2"></h1>
+                    
+                    <!-- Рейтинг в деталях -->
+                    <div class="flex items-center gap-1.5 mb-5" id="mRatingBlock">
+                        <!-- Звезды добавятся динамически -->
                     </div>
 
-                    <!-- ПК/Мобильный селектор количества и кнопка покупки -->
-                    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50">
-                        <div class="flex items-center border border-gray-200 rounded-xl h-14 bg-gray-50 shrink-0">
-                            <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-gray-500 active:bg-gray-200 rounded-l-xl">-</button>
-                            <span id="mQty" class="w-8 text-center font-bold text-lg">1</span>
-                            <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-gray-500 active:bg-gray-200 rounded-r-xl">+</button>
+                    <div id="mPrice" class="text-2xl md:text-3xl font-black text-blue-600 mb-6"></div>
+
+                    <!-- Фирменные инфо-карточки -->
+                    <div class="grid grid-cols-2 gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-shield-alt text-blue-600 text-lg"></i>
+                            <span class="text-[11px] font-semibold text-slate-700 leading-tight">Официальная<br>гарантия</span>
                         </div>
-                        <button onclick="addToCart()" class="flex-1 bg-black text-white h-14 rounded-xl font-bold text-sm shadow-lg shadow-gray-200 active:scale-95 transition-all hover:bg-gray-950 flex items-center justify-center gap-2">
-                            <i class="fas fa-shopping-cart"></i> Добавить в корзину
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-shipping-fast text-blue-600 text-lg"></i>
+                            <span class="text-[11px] font-semibold text-slate-700 leading-tight">Быстрая<br>доставка</span>
+                        </div>
+                    </div>
+
+                    <!-- Действия покупки (на мобильных прикреплены снизу, на ПК обычные) -->
+                    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50">
+                        <div class="flex items-center border border-slate-200 rounded-xl h-14 bg-slate-50 shrink-0">
+                            <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-slate-500 active:bg-slate-200 rounded-l-xl">-</button>
+                            <span id="mQty" class="w-8 text-center font-bold text-lg">1</span>
+                            <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center text-xl font-bold text-slate-500 active:bg-slate-200 rounded-r-xl">+</button>
+                        </div>
+                        <button onclick="addToCart()" class="flex-1 bg-blue-600 text-white h-14 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Добавить в корзину</span>
                         </button>
                     </div>
 
-                    <!-- СЕКЦИЯ ОТЗЫВОВ И РЕЙТИНГА -->
-                    <div class="mt-8 border-t border-gray-100 pt-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-gray-900 text-sm uppercase tracking-wide">Отзывы покупателей</h3>
-                            <button onclick="openAddReviewModal()" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                                <i class="fas fa-pen"></i> Написать отзыв
-                            </button>
+                    <!-- Описание -->
+                    <div class="mt-6 md:mt-8 mb-6">
+                        <h3 class="font-black text-slate-900 text-sm uppercase tracking-wider mb-2">Характеристики и описание</h3>
+                        <p id="mDesc" class="text-slate-600 text-sm leading-relaxed"></p>
+                    </div>
+
+                    <!-- ВКЛАДКА ОТЗЫВОВ -->
+                    <div class="mt-4 bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+                            <h4 class="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                                <i class="fas fa-comments text-blue-600"></i> Отзывы пользователей
+                            </h4>
+                            <span id="reviewsCountBadge" class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+                        </div>
+                        
+                        <!-- Список отзывов -->
+                        <div id="reviewsList" class="p-4 space-y-4 max-h-60 overflow-y-auto hide-scrollbar">
+                            <!-- Отзывы добавятся через JS -->
                         </div>
 
-                        <!-- Список отзывов -->
-                        <div id="reviewsList" class="space-y-3 max-h-[300px] overflow-y-auto pr-1 hide-scrollbar"></div>
+                        <!-- Форма написания отзыва -->
+                        <div class="p-4 bg-white border-t border-slate-200">
+                            <h5 class="font-bold text-slate-800 text-xs mb-3">Оставить отзыв</h5>
+                            <div class="flex items-center gap-1 mb-3">
+                                <span class="text-xs text-slate-500 mr-2">Ваша оценка:</span>
+                                <div class="flex gap-1" id="starSelector">
+                                    <i class="fas fa-star text-slate-300 text-lg cursor-pointer transition-colors" data-value="1" onclick="selectReviewStars(1)"></i>
+                                    <i class="fas fa-star text-slate-300 text-lg cursor-pointer transition-colors" data-value="2" onclick="selectReviewStars(2)"></i>
+                                    <i class="fas fa-star text-slate-300 text-lg cursor-pointer transition-colors" data-value="3" onclick="selectReviewStars(3)"></i>
+                                    <i class="fas fa-star text-slate-300 text-lg cursor-pointer transition-colors" data-value="4" onclick="selectReviewStars(4)"></i>
+                                    <i class="fas fa-star text-slate-300 text-lg cursor-pointer transition-colors" data-value="5" onclick="selectReviewStars(5)"></i>
+                                </div>
+                            </div>
+                            <input type="text" id="reviewAuthor" placeholder="Ваше имя" class="w-full border border-slate-200 p-2.5 rounded-xl text-xs outline-none focus:border-blue-500 mb-2">
+                            <textarea id="reviewText" placeholder="Поделитесь вашим впечатлением о товаре..." class="w-full border border-slate-200 p-2.5 rounded-xl text-xs h-16 outline-none resize-none focus:border-blue-500 mb-3"></textarea>
+                            <button onclick="submitReview()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors">Отправить отзыв</button>
+                        </div>
                     </div>
 
                 </div>
@@ -216,139 +224,88 @@
     <!-- КОРЗИНА -->
     <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-[60] hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
-        <div class="p-5 border-b flex justify-between items-center bg-gray-50">
-            <h2 class="text-lg font-black uppercase tracking-tight">Ваша Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1"></span></h2>
-            <button onclick="toggleCart()" class="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-gray-100 border border-gray-100 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+        <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+            <h2 class="text-base font-black uppercase tracking-wider">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1"></span></h2>
+            <button onclick="toggleCart()" class="w-10 h-10 rounded-full flex items-center justify-center bg-white text-slate-700 hover:bg-slate-100 shadow-sm transition-colors aspect-square">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
-        <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-        <div class="p-5 border-t bg-white pb-8 safe-area-pb">
+        <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar"></div>
+        <div class="p-5 border-t bg-white pb-8">
             <div class="flex justify-between items-center mb-4">
-                <span class="text-gray-500 font-medium text-sm">Итого к оплате</span>
-                <span id="cartTotal" class="text-xl font-black text-gray-900">0 сум</span>
+                <span class="text-slate-400 font-semibold text-xs uppercase tracking-wider">Итого к оплате</span>
+                <span id="cartTotal" class="text-lg font-black text-slate-900">0 сум</span>
             </div>
-            <button onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">
-                Оформить заказ
+            <button onclick="openCheckoutModal()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors">
+                Перейти к оформлению
             </button>
         </div>
     </div>
 
     <!-- МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ ЗАКАЗА -->
     <div id="checkoutModal" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
-            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-black text-base uppercase tracking-tight text-gray-900">Данные доставки</h3>
-                <button onclick="closeCheckoutModal()" class="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded-full transition-colors">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-black text-xs uppercase tracking-wider text-slate-900">Оформить доставку</h3>
+                <button onclick="closeCheckoutModal()" class="w-10 h-10 rounded-full flex items-center justify-center bg-white text-slate-700 hover:bg-slate-100 shadow-sm transition-colors aspect-square">
                     <i class="fas fa-times text-sm"></i>
                 </button>
             </div>
             <form id="orderForm" onsubmit="sendOrder(event)" class="p-5 space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ваше имя</label>
-                    <input type="text" id="orderName" required placeholder="Александр" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">Получатель</label>
+                    <input type="text" id="orderName" required placeholder="Введите ваше имя" class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-600 transition-all">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Телефон номер</label>
-                    <input type="tel" id="orderPhone" required placeholder="+998 (90) 123-45-67" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">Контактный телефон</label>
+                    <input type="tel" id="orderPhone" required placeholder="+998 (90) 123-45-67" class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-600 transition-all">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Адрес доставки</label>
-                    <textarea id="orderAddress" required placeholder="Город, улица, дом, ориентир..." class="w-full border p-3 rounded-xl text-sm h-20 outline-none resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></textarea>
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">Адрес доставки</label>
+                    <textarea id="orderAddress" required placeholder="Укажите город, улицу, дом, квартиру и ориентиры" class="w-full border border-slate-200 p-3 rounded-xl text-xs h-20 outline-none resize-none focus:border-blue-600 transition-all"></textarea>
                 </div>
-                <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-md hover:bg-blue-700 transition-colors mt-2">
+                <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase text-xs tracking-wider shadow-md hover:bg-blue-700 transition-colors mt-2">
                     Подтвердить заказ
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ОТЗЫВА -->
-    <div id="reviewModal" class="fixed inset-0 bg-black/60 z-[90] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-black text-base uppercase tracking-tight text-gray-900">Оставить отзыв</h3>
-                <button onclick="closeReviewModal()" class="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded-full transition-colors">
-                    <i class="fas fa-times text-sm"></i>
-                </button>
-            </div>
-            <form id="reviewForm" onsubmit="submitReview(event)" class="p-5 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Ваша оценка</label>
-                    <div class="flex gap-2 text-2xl text-gray-300" id="starSelector">
-                        <i class="fas fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-value="1" onclick="selectStar(1)"></i>
-                        <i class="fas fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-value="2" onclick="selectStar(2)"></i>
-                        <i class="fas fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-value="3" onclick="selectStar(3)"></i>
-                        <i class="fas fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-value="4" onclick="selectStar(4)"></i>
-                        <i class="fas fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-value="5" onclick="selectStar(5)"></i>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ваше имя</label>
-                    <input type="text" id="reviewAuthor" required placeholder="Алексей" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Комментарий</label>
-                    <textarea id="reviewText" required placeholder="Поделитесь вашим мнением о товаре..." class="w-full border p-3 rounded-xl text-sm h-24 outline-none resize-none focus:border-blue-500"></textarea>
-                </div>
-                <button type="submit" id="submitReviewBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-md hover:bg-blue-700 transition-colors">
-                    Отправить отзыв
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- МОБИЛЬНОЕ НИЖНЕЕ МЕНЮ (из image_498c19.png) -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 py-2 px-6 flex justify-between items-center z-40 md:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <button onclick="filter('All'); window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center gap-1 text-blue-600">
-            <i class="fas fa-home text-lg"></i>
-            <span class="text-[9px] font-bold">Главная</span>
-        </button>
-        <button onclick="toggleCart()" class="flex flex-col items-center gap-1 text-gray-400 hover:text-blue-600 relative">
-            <i class="fas fa-shopping-bag text-lg"></i>
-            <span class="text-[9px] font-bold">Корзина</span>
-            <span id="mobileCartBadge" class="absolute -top-1 -right-2 bg-blue-600 text-white text-[8px] font-bold h-3 w-3 flex items-center justify-center rounded-full opacity-0">0</span>
-        </button>
-        <button onclick="document.getElementById('searchInput').focus()" class="flex flex-col items-center gap-1 text-gray-400 hover:text-blue-600">
-            <i class="fas fa-search text-lg"></i>
-            <span class="text-[9px] font-bold">Поиск</span>
-        </button>
-    </div>
-
     <!-- АДМИН ПАНЕЛЬ -->
-    <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4 md:p-8">
+    <div id="adminModal" class="fixed inset-0 z-[100] bg-slate-50 hidden overflow-y-auto p-4 md:p-8">
         <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
-            <div class="p-4 border-b flex justify-between items-center bg-gray-900 text-white sticky top-0 z-10">
-                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-database"></i> Панель управления WEISI</h2>
-                <button onclick="closeAdmin()" class="text-xs bg-gray-700 px-3 py-1.5 rounded hover:bg-gray-600 transition-colors">Закрыть</button>
+            <div class="p-4 border-b flex justify-between items-center bg-slate-900 text-white sticky top-0 z-10">
+                <h2 class="font-black text-xs uppercase tracking-widest flex items-center gap-2"><i class="fas fa-cogs"></i> Панель управления WEISI</h2>
+                <button onclick="closeAdmin()" class="text-xs bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg font-bold transition-colors">Закрыть</button>
             </div>
             
             <div class="p-4 space-y-6 md:flex md:gap-6 md:space-y-0">
+                <!-- Форма создания/редактирования -->
                 <form id="addForm" class="space-y-4 md:w-1/2">
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm" id="formWrapper">
-                        <h3 id="formTitle" class="font-bold text-blue-800 mb-3 text-sm uppercase">Новое устройство</h3>
+                    <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 shadow-sm transition-all" id="formWrapper">
+                        <h3 id="formTitle" class="font-black text-blue-900 mb-3 text-xs uppercase tracking-wider">Новое устройство</h3>
                         
                         <div class="space-y-3">
-                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
+                            <input type="text" id="aName" placeholder="Название товара" required class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
                             
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
-                                <select id="aCat" required class="w-full border-gray-200 border p-3 rounded-lg text-sm bg-white outline-none focus:border-blue-500">
+                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border border-slate-200 p-3 rounded-xl text-xs outline-none focus:border-blue-500 bg-white">
+                                <select id="aCat" required class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-white outline-none focus:border-blue-500">
                                     <option value="" disabled selected>Категория</option>
                                     <option value="Peripherals">Периферия</option>
                                     <option value="Cameras">Видеонаблюдение</option>
-                                    <option value="Network">Сетевое оборудование</option>
+                                    <option value="Network">Сетевое</option>
                                 </select>
                             </div>
 
-                            <textarea id="aDesc" placeholder="Характеристики и описание..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-28 outline-none resize-none focus:border-blue-500"></textarea>
+                            <textarea id="aDesc" placeholder="Характеристики и описание..." class="w-full border border-slate-200 p-3 rounded-xl text-xs h-24 outline-none resize-none focus:border-blue-500 bg-white"></textarea>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Фотографии (До 10 штук)</label>
-                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white cursor-pointer hover:bg-gray-50 transition-colors relative">
+                                <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">Фотографии оборудования (до 10 шт)</label>
+                                <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center bg-white cursor-pointer hover:border-blue-500 hover:bg-blue-50/30 transition-all relative">
                                     <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
-                                    <div class="text-gray-400 text-xs font-bold pointer-events-none">
-                                        <i class="fas fa-camera text-xl mb-1 block"></i> Выбрать файлы
+                                    <div class="text-slate-400 text-xs font-bold pointer-events-none">
+                                        <i class="fas fa-hdd text-xl mb-1.5 block text-slate-400"></i> Загрузить файлы
                                     </div>
                                 </div>
                                 <div id="photoPreviewContainer" class="grid grid-cols-4 gap-2 mt-2"></div>
@@ -356,21 +313,24 @@
                         </div>
 
                         <div class="flex gap-2 mt-4">
-                            <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-blue-700">СОХРАНИТЬ В БАЗУ</button>
-                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-gray-400 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-transform hover:bg-gray-500">ОТМЕНА</button>
+                            <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md hover:bg-blue-700 transition-all">Сохранить</button>
+                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-slate-400 text-white px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-500 transition-all">Отмена</button>
                         </div>
                     </div>
                 </form>
 
-                <div class="md:w-1/2 md:border-l md:border-gray-200 md:pl-6 md:max-h-[75vh] md:overflow-y-auto hide-scrollbar">
-                    <h3 class="font-bold text-gray-400 text-xs uppercase mb-3 px-1 sticky top-0 bg-white z-10 py-2">Управление товарами</h3>
+                <!-- Список управления продуктами -->
+                <div class="md:w-1/2 md:border-l md:border-slate-100 md:pl-6 md:max-h-[75vh] md:overflow-y-auto hide-scrollbar">
+                    <h3 class="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-3 px-1 sticky top-0 bg-white py-2 z-10">Список товаров на складе</h3>
                     <div id="adminList" class="space-y-3"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- JS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
     <script>
         const tg = window.Telegram?.WebApp || null;
         if (tg) { tg.expand(); }
@@ -378,59 +338,40 @@
         let products = [];
         let cart = [];
         let currentProduct = null;
+        let selectedStars = 5;
         let qty = 1;
         let uploadedImages = [];
         let productSwiper = null; 
         const SECRET_CODE = "4443";
         let editMode = false;
         let editProductId = null;
-        let selectedReviewRating = 5;
+        let confirmAction = null;
 
-        // Кастомный колбэк для подтверждения (без confirm)
-        let onConfirmSuccess = null;
+        // Вспомогательная утилита для кастомных уведомлений
+        function showToast(text) {
+            const toast = document.getElementById('toastMessage');
+            toast.innerText = text;
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 3000);
+        }
 
-        function showCustomConfirm(onSuccess) {
-            onConfirmSuccess = onSuccess;
+        // Кастомное модальное окно подтверждения
+        function openConfirmModal(onConfirm) {
+            confirmAction = onConfirm;
             document.getElementById('confirmModal').classList.remove('hidden');
         }
 
-        document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+        function closeConfirmModal(confirm) {
             document.getElementById('confirmModal').classList.add('hidden');
-            onConfirmSuccess = null;
-        });
-
-        document.getElementById('confirmOkBtn').addEventListener('click', () => {
-            document.getElementById('confirmModal').classList.add('hidden');
-            if (onConfirmSuccess) onConfirmSuccess();
-            onConfirmSuccess = null;
-        });
-
-        // Кастомное уведомление
-        function showNotification(message, isError = false) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast-slide flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-lg font-bold text-xs pointer-events-auto transition-all ${isError ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-gray-900 text-white'}`;
-            toast.innerHTML = `
-                <i class="fas ${isError ? 'fa-exclamation-circle text-blue-500' : 'fa-check-circle text-blue-400'} text-base"></i>
-                <span>${message}</span>
-            `;
-            container.appendChild(toast);
-            setTimeout(() => { toast.remove(); }, 3000);
+            if (confirm && confirmAction) {
+                confirmAction();
+            }
+            confirmAction = null;
         }
 
-        // Поиск
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const val = e.target.value;
-            if(val === SECRET_CODE) { 
-                openAdminPanel(); 
-                e.target.value = ''; 
-                e.target.blur(); 
-            } else { 
-                renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
-            }
-        });
-
-        // Загрузка каталога с сервера
+        // API: Получение товаров
         async function loadProducts() {
             try {
                 const res = await fetch('/api/products');
@@ -438,36 +379,41 @@
                 renderGrid(products);
             } catch (e) { 
                 console.error(e); 
-                showNotification("Ошибка загрузки каталога", true);
+                showToast('Ошибка при загрузке каталога');
             } finally { 
                 document.getElementById('loader').classList.add('hidden'); 
             }
         }
 
+        // API: Сохранение товара
         async function saveProduct(prod) {
             const btn = document.getElementById('saveBtn');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
             btn.disabled = true;
             try {
-                await fetch('/api/products', { 
+                const res = await fetch('/api/products', { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify(prod) 
                 });
-                await loadProducts();
-                renderAdminList();
-                if (editMode) { 
-                    cancelEdit(); 
-                    showNotification('Изменения сохранены!'); 
-                } else { 
-                    resetForm(); 
-                    showNotification('Устройство успешно добавлено!'); 
+                if (res.ok) {
+                    await loadProducts();
+                    renderAdminList();
+                    if (editMode) { 
+                        cancelEdit(); 
+                        showToast('Изменения сохранены!'); 
+                    } else { 
+                        resetForm(); 
+                        showToast('Товар добавлен в базу!'); 
+                    }
+                } else {
+                    showToast('Не удалось сохранить товар');
                 }
             } catch (e) { 
-                showNotification('Ошибка сохранения в базу', true); 
+                showToast('Ошибка сети');
             } finally { 
-                if (!editMode) btn.innerHTML = originalText; 
+                btn.innerHTML = originalText; 
                 btn.disabled = false; 
             }
         }
@@ -492,11 +438,9 @@
             uploadedImages = [...prod.images];
             renderPhotoPreview();
 
-            document.getElementById('formWrapper').classList.replace('bg-blue-50', 'bg-slate-900');
-            document.getElementById('formWrapper').classList.replace('border-blue-100', 'border-slate-800');
-            document.getElementById('formWrapper').classList.add('text-white');
-            document.getElementById('formTitle').innerText = '✏️ Редактирование устройства';
-            document.getElementById('formTitle').classList.replace('text-blue-800', 'text-blue-400');
+            document.getElementById('formWrapper').className = 'bg-amber-50/50 p-4 rounded-2xl border border-amber-200 shadow-sm transition-all';
+            document.getElementById('formTitle').innerText = '✏️ РЕДАКТИРОВАНИЕ ТОВАРА';
+            document.getElementById('formTitle').className = 'font-black text-amber-950 mb-3 text-xs uppercase tracking-wider';
             document.getElementById('saveBtn').innerText = 'СОХРАНИТЬ ИЗМЕНЕНИЯ';
             document.getElementById('cancelEditBtn').classList.remove('hidden');
             document.getElementById('adminModal').scrollTo({ top: 0, behavior: 'smooth' });
@@ -506,132 +450,114 @@
             editMode = false;
             editProductId = null;
             resetForm();
-            document.getElementById('formWrapper').classList.replace('bg-slate-900', 'bg-blue-50');
-            document.getElementById('formWrapper').classList.replace('border-slate-800', 'border-blue-100');
-            document.getElementById('formWrapper').classList.remove('text-white');
-            document.getElementById('formTitle').innerText = 'Новый товар';
-            document.getElementById('formTitle').classList.replace('text-blue-400', 'text-blue-800');
-            document.getElementById('saveBtn').innerText = 'СОХРАНИТЬ В БАЗУ';
+            document.getElementById('formWrapper').className = 'bg-blue-50/50 p-4 rounded-2xl border border-blue-100 shadow-sm transition-all';
+            document.getElementById('formTitle').innerText = 'Новое устройство';
+            document.getElementById('formTitle').className = 'font-black text-blue-900 mb-3 text-xs uppercase tracking-wider';
+            document.getElementById('saveBtn').innerText = 'Сохранить';
             document.getElementById('cancelEditBtn').classList.add('hidden');
         }
 
-        async function deleteProduct(id) {
-            showCustomConfirm(async () => {
-                await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                if (editMode && editProductId === id) cancelEdit();
-                await loadProducts();
-                renderAdminList();
-                showNotification('Товар удален из базы');
+        function deleteProduct(id) {
+            openConfirmModal(async () => {
+                try {
+                    await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                    if (editMode && editProductId === id) cancelEdit();
+                    await loadProducts();
+                    renderAdminList();
+                    showToast('Товар успешно удален');
+                } catch (e) {
+                    showToast('Ошибка при удалении');
+                }
             });
         }
 
         async function toggleStock(id, status) {
-            await fetch('/api/stock', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({id, status: !status}) 
-            });
-            await loadProducts();
-            renderAdminList();
-        }
-
-        // Генерация звезд
-        function generateStarsHTML(rating) {
-            let html = '';
-            const floorRating = Math.round(rating);
-            for (let i = 1; i <= 5; i++) {
-                if (i <= floorRating) {
-                    html += '<i class="fas fa-star text-yellow-400"></i>';
-                } else {
-                    html += '<i class="fas fa-star text-gray-200"></i>';
-                }
+            try {
+                await fetch('/api/stock', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({id, status: !status}) 
+                });
+                await loadProducts();
+                renderAdminList();
+                showToast('Статус склада обновлен');
+            } catch (e) {
+                showToast('Ошибка соединения');
             }
-            return html;
         }
 
-        // Рендер каталога
+        // РЕНДЕР КАТАЛОГА С РЕЙТИНГАМИ
         function renderGrid(items) {
             const grid = document.getElementById('productGrid');
             if(items.length === 0) { 
-                grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 text-sm">Товаров в данной категории пока нет</div>'; 
+                grid.innerHTML = '<div class="col-span-full text-center text-slate-400 py-16 text-xs font-bold uppercase tracking-widest">Оборудование не найдено</div>'; 
                 return; 
             }
             grid.innerHTML = items.map(p => {
-                const avgRating = p.avgRating || 0;
-                const reviewsCount = p.reviewsCount || 0;
-                // Имитация скидки для стиля из image_498c19.png
-                const fakeDiscount = Math.floor(Math.random() * 25) + 5;
+                const reviewsCount = p.reviews_count || 0;
+                const ratingValue = parseFloat(p.rating || 5.0).toFixed(1);
                 return `
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-all flex flex-col justify-between" onclick="openProduct('${p.id}')">
-                        <div class="aspect-square relative bg-gray-50 group">
-                            <img src="${p.images[0]}" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500">
-                            <!-- Бейджи из примера -->
-                            <div class="absolute top-2 left-2 flex flex-col gap-1">
-                                <span class="bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">-${fakeDiscount}%</span>
-                                <span class="bg-black text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Ommabop</span>
-                            </div>
-                            <div class="absolute top-2 right-2 bg-white/80 p-1.5 rounded-full hover:bg-white transition-colors" onclick="event.stopPropagation(); showNotification('Добавлено в избранное!')">
-                                <i class="far fa-heart text-gray-400 hover:text-blue-500"></i>
-                            </div>
-                            ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-gray-950 text-white px-3 py-1 text-[10px] font-bold uppercase rounded-full">Нет на складе</span></div>' : ''}
+                <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all relative flex flex-col group" onclick="openProduct('${p.id}')">
+                    <div class="aspect-square relative bg-slate-50 overflow-hidden">
+                        <img src="${p.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/95 flex items-center justify-center"><span class="bg-slate-900 text-white px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md">НЕТ В НАЛИЧИИ</span></div>' : ''}
+                    </div>
+                    <div class="p-3.5 flex-1 flex flex-col justify-between">
+                        <div>
+                            <p class="text-[9px] text-blue-600 mb-1 uppercase font-black tracking-wider">${translateCat(p.category)}</p>
+                            <h3 class="font-black text-xs text-slate-900 leading-tight mb-2 line-clamp-2">${p.name}</h3>
                         </div>
-                        <div class="p-3 flex-1 flex flex-col justify-between">
-                            <div>
-                                <p class="text-[9px] text-gray-400 mb-1 uppercase font-bold tracking-wider">${translateCat(p.category)}</p>
-                                <h3 class="font-bold text-xs leading-snug text-gray-800 line-clamp-2 mb-2">${p.name}</h3>
-                                
-                                <!-- Строка оценок из image_498c19.png -->
-                                <div class="flex items-center gap-1 mb-2">
-                                    <div class="flex text-[10px]">
-                                        ${generateStarsHTML(avgRating)}
-                                    </div>
-                                    <span class="text-[10px] text-gray-500 font-bold">${avgRating.toFixed(1)} (${reviewsCount})</span>
-                                </div>
+                        
+                        <div>
+                            <!-- Отображение звезд и количества отзывов -->
+                            <div class="flex items-center gap-1 mb-2">
+                                <span class="text-amber-500 text-[10px]"><i class="fas fa-star"></i></span>
+                                <span class="text-[10px] font-bold text-slate-700">${ratingValue}</span>
+                                <span class="text-[9px] text-slate-400">(${reviewsCount})</span>
                             </div>
-                            
-                            <div class="flex items-center justify-between mt-1">
-                                <div>
-                                    <p class="text-xs text-gray-300 line-through">${formatMoney(p.price * 1.25)}</p>
-                                    <p class="text-blue-600 font-black text-sm">${formatMoney(p.price)}</p>
-                                </div>
-                                <button onclick="event.stopPropagation(); quickAddToCart('${p.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl h-9 w-9 flex items-center justify-center transition-all ${!p.isAvailable ? 'opacity-50 pointer-events-none' : ''}">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
+                            <p class="text-slate-900 font-extrabold text-xs">${formatMoney(p.price)}</p>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
             }).join('');
         }
 
-        // Быстрое добавление в корзину в одно нажатие
-        function quickAddToCart(id) {
-            const p = products.find(p => p.id === id);
-            if(!p) return;
-            cart.push({ ...p, cartId: Date.now(), qty: 1 });
-            updateCart();
-            showNotification(`«${p.name}» добавлен в корзину!`);
-            try { tg?.HapticFeedback.notificationOccurred('success'); } catch(e){}
-        }
-
-        // Открытие детальной карточки товара
+        // ОТКРЫТИЕ СТРАНИЦЫ ТОВАРА
         async function openProduct(id) {
             currentProduct = products.find(p => p.id === id);
             if(!currentProduct) return;
             
             qty = 1;
             document.getElementById('mQty').innerText = 1;
+            
             document.getElementById('mName').innerText = currentProduct.name;
             document.getElementById('mPrice').innerText = formatMoney(currentProduct.price);
             document.getElementById('mCategory').innerText = translateCat(currentProduct.category);
             document.getElementById('mDesc').innerText = currentProduct.description || "Характеристики не указаны.";
 
-            // Обновление картинок слайдера
+            // Обновление детального рейтинга
+            const ratingValue = parseFloat(currentProduct.rating || 5.0).toFixed(1);
+            let ratingHTML = `
+                <div class="flex text-amber-500 text-xs gap-0.5">
+            `;
+            for (let r = 1; r <= 5; r++) {
+                if (r <= Math.round(ratingValue)) {
+                    ratingHTML += '<i class="fas fa-star"></i>';
+                } else {
+                    ratingHTML += '<i class="far fa-star"></i>';
+                }
+            }
+            ratingHTML += `
+                </div>
+                <span class="text-xs font-black text-slate-800">${ratingValue}</span>
+                <span class="text-xs text-slate-400">| ${currentProduct.reviews_count || 0} отзывов</span>
+            `;
+            document.getElementById('mRatingBlock').innerHTML = ratingHTML;
+
             const wrapper = document.getElementById('modalSwiperWrapper');
             wrapper.innerHTML = currentProduct.images.map(img => `
-                <div class="swiper-slide bg-white flex items-center justify-center p-4">
-                    <img src="${img}" class="w-full h-full object-contain">
-                </div>
+                <div class="swiper-slide bg-white flex items-center justify-center"><img src="${img}" class="w-full h-full object-contain"></div>
             `).join('');
             
             if (productSwiper) productSwiper.destroy(true, true);
@@ -641,8 +567,8 @@
                 pagination: { el: ".swiper-pagination", clickable: true } 
             });
 
-            // Загрузка отзывов для товара
-            await loadReviewsForProduct(currentProduct.id);
+            // Загрузка отзывов для текущего товара
+            await loadReviews(currentProduct.id);
 
             const modal = document.getElementById('productView');
             document.getElementById('modalBackdrop').classList.remove('hidden');
@@ -655,129 +581,31 @@
             setTimeout(() => { document.getElementById('modalBackdrop').classList.add('hidden'); }, 300);
         }
 
-        // Оценки и отзывы покупателей
-        async function loadReviewsForProduct(productId) {
-            try {
-                const res = await fetch(`/api/products/${productId}/reviews`);
-                const reviews = await res.json();
-                
-                // Рассчет среднего рейтинга
-                let totalScore = 0;
-                reviews.forEach(r => totalScore += r.rating);
-                const avg = reviews.length > 0 ? (totalScore / reviews.length) : 0;
-
-                // Обновление UI карточки
-                document.getElementById('mRatingStars').innerHTML = generateStarsHTML(avg);
-                document.getElementById('mRatingValue').innerText = avg.toFixed(1);
-                document.getElementById('mReviewsCount').innerText = `(${reviews.length} отзывов)`;
-
-                // Рендер списка отзывов
-                const list = document.getElementById('reviewsList');
-                if (reviews.length === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-400 py-4 text-center">Оценок еще нет. Будьте первым!</p>';
-                } else {
-                    list.innerHTML = reviews.map(r => `
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-bold text-gray-800">${r.user_name}</span>
-                                <span class="text-[9px] text-gray-400">${new Date(r.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <div class="flex text-[10px] text-yellow-400 mb-1.5">${generateStarsHTML(r.rating)}</div>
-                            <p class="text-xs text-gray-600 leading-normal">${r.comment}</p>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // Модалки для добавления отзывов
-        function openAddReviewModal() {
-            selectStar(5);
-            document.getElementById('reviewModal').classList.remove('hidden');
-        }
-
-        function closeReviewModal() {
-            document.getElementById('reviewModal').classList.add('hidden');
-            document.getElementById('reviewForm').reset();
-        }
-
-        function selectStar(rating) {
-            selectedReviewRating = rating;
-            const stars = document.querySelectorAll('#starSelector i');
-            stars.forEach((s, idx) => {
-                if (idx < rating) {
-                    s.classList.replace('text-gray-300', 'text-yellow-400');
-                    s.classList.add('scale-110');
-                } else {
-                    s.classList.replace('text-yellow-400', 'text-gray-300');
-                    s.classList.remove('scale-110');
-                }
-            });
-        }
-
-        async function submitReview(e) {
-            e.preventDefault();
-            if(!currentProduct) return;
-
-            const reviewData = {
-                user_name: document.getElementById('reviewAuthor').value,
-                rating: selectedReviewRating,
-                comment: document.getElementById('reviewText').value
-            };
-
-            const submitBtn = document.getElementById('submitReviewBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Отправка...';
-
-            try {
-                const res = await fetch(`/api/products/${currentProduct.id}/reviews`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(reviewData)
-                });
-                const result = await res.json();
-                if (result.status === 'ok') {
-                    showNotification('Ваш отзыв успешно опубликован!');
-                    closeReviewModal();
-                    await loadReviewsForProduct(currentProduct.id);
-                    await loadProducts(); // Обновление звезд на главной
-                }
-            } catch (e) {
-                showNotification('Не удалось отправить отзыв', true);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Отправить отзыв';
-            }
-        }
-
         function updateQty(d) {
             qty = Math.max(1, qty + d);
             document.getElementById('mQty').innerText = qty;
         }
 
+        // КОРЗИНА
         function addToCart() {
+            if (!currentProduct.isAvailable) {
+                showToast('Извините, оборудования нет на складе');
+                return;
+            }
             cart.push({ ...currentProduct, cartId: Date.now(), qty });
             closeProduct();
             updateCart();
-            showNotification(`Устройство добавлено в корзину`);
+            showToast('Добавлено в корзину');
             try { tg?.HapticFeedback.notificationOccurred('success'); } catch(e){}
         }
 
         function updateCart() {
             const cnt = document.getElementById('cartItems');
             const badge = document.getElementById('cartBadge');
-            const mobileBadge = document.getElementById('mobileCartBadge');
             const totalEl = document.getElementById('cartTotal');
             
             badge.innerText = cart.length;
             badge.classList.toggle('opacity-0', cart.length===0);
-
-            if (mobileBadge) {
-                mobileBadge.innerText = cart.length;
-                mobileBadge.classList.toggle('opacity-0', cart.length===0);
-            }
             
             const headerCount = document.getElementById('cartHeaderCount');
             if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.length})` : '';
@@ -786,19 +614,21 @@
             totalEl.innerText = formatMoney(total);
 
             if(cart.length === 0) {
-                cnt.innerHTML = '<div class="text-center text-gray-400 mt-20 text-sm">Корзина пуста</div>';
+                cnt.innerHTML = '<div class="text-center text-slate-400 mt-20 text-xs font-bold uppercase tracking-wider">Корзина пуста</div>';
             } else {
                 cnt.innerHTML = cart.map((i, idx) => `
-                    <div class="flex gap-3 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                        <img src="${i.images[0]}" class="w-16 h-16 object-contain rounded-lg bg-white border border-gray-100">
+                    <div class="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 items-center">
+                        <img src="${i.images[0]}" class="w-14 h-14 object-cover rounded-lg bg-white border shrink-0">
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-xs truncate mr-2">${i.name}</h4>
-                                <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1 hover:text-blue-600 transition-colors"><i class="fas fa-times"></i></button>
+                                <h4 class="font-bold text-xs truncate mr-2 text-slate-900">${i.name}</h4>
+                                <button onclick="removeFromCart(${idx})" class="text-slate-400 hover:text-red-500 transition-colors shrink-0">
+                                    <i class="fas fa-trash-alt text-xs"></i>
+                                </button>
                             </div>
                             <div class="flex justify-between items-center mt-2">
                                 <span class="text-blue-600 font-extrabold text-xs">${formatMoney(i.price * i.qty)}</span>
-                                <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-gray-600 font-bold">x${i.qty}</span>
+                                <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-slate-600 font-bold">x${i.qty}</span>
                             </div>
                         </div>
                     </div>
@@ -806,10 +636,13 @@
             }
         }
 
-        function removeFromCart(idx) { cart.splice(idx, 1); updateCart(); }
+        function removeFromCart(idx) { 
+            cart.splice(idx, 1); 
+            updateCart(); 
+        }
 
         function openCheckoutModal() {
-            if(cart.length === 0) { showNotification('Корзина пуста', true); return; }
+            if(cart.length === 0) { showToast('Сначала добавьте товары в корзину'); return; }
             document.getElementById('checkoutModal').classList.remove('hidden');
         }
 
@@ -817,6 +650,7 @@
             document.getElementById('checkoutModal').classList.add('hidden');
         }
 
+        // Оформление заказа
         async function sendOrder(event) {
             if(event) event.preventDefault();
             if(cart.length === 0) return;
@@ -852,24 +686,134 @@
 
                 const result = await response.json();
                 if(result.status === 'ok') {
-                    showNotification(`Заказ №${result.order_id} успешно оформлен!`);
+                    showToast(`Заказ №${result.order_id} успешно оформлен!`);
                     cart = [];
                     updateCart();
                     closeCheckoutModal();
                     toggleCart();
                     document.getElementById('orderForm').reset();
                 } else {
-                    showNotification('Ошибка при оформлении: ' + result.msg, true);
+                    showToast('Ошибка оформления: ' + result.msg);
                 }
             } catch(e) {
-                showNotification('Произошла ошибка связи с сервером.', true);
+                showToast('Ошибка при связи с сервером.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Подтвердить заказ';
             }
         }
 
-        // Загрузка фотографий для админки
+        // --- УПРАВЛЕНИЕ ОТЗЫВАМИ ---
+        async function loadReviews(productId) {
+            try {
+                const res = await fetch(`/api/reviews/${productId}`);
+                const reviews = await res.json();
+                
+                document.getElementById('reviewsCountBadge').innerText = reviews.length;
+                
+                const list = document.getElementById('reviewsList');
+                if (reviews.length === 0) {
+                    list.innerHTML = '<div class="text-center text-slate-400 py-6 text-xs">Отзывов пока нет. Будьте первыми!</div>';
+                } else {
+                    list.innerHTML = reviews.map(r => {
+                        let starsHTML = '';
+                        for (let s = 1; s <= 5; s++) {
+                            starsHTML += `<i class="${s <= r.rating ? 'fas' : 'far'} fa-star text-amber-500 text-[10px]"></i>`;
+                        }
+                        const rDate = new Date(r.created_at).toLocaleDateString('ru-RU');
+                        return `
+                            <div class="border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-xs text-slate-900">${r.user_name}</span>
+                                    <span class="text-[9px] text-slate-400">${rDate}</span>
+                                </div>
+                                <div class="flex gap-0.5 mb-1.5">${starsHTML}</div>
+                                <p class="text-[11px] text-slate-600 leading-normal">${r.review_text}</p>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function selectReviewStars(val) {
+            selectedStars = val;
+            const stars = document.querySelectorAll('#starSelector i');
+            stars.forEach(s => {
+                const starVal = parseInt(s.dataset.value);
+                if (starVal <= val) {
+                    s.classList.replace('far', 'fas');
+                } else {
+                    s.classList.replace('fas', 'far');
+                }
+            });
+        }
+
+        async function submitReview() {
+            const author = document.getElementById('reviewAuthor').value.trim();
+            const text = document.getElementById('reviewText').value.trim();
+            
+            if (!author || !text) {
+                showToast('Пожалуйста, заполните все поля отзыва');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        product_id: currentProduct.id,
+                        user_name: author,
+                        rating: selectedStars,
+                        review_text: text
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Отзыв успешно отправлен!');
+                    document.getElementById('reviewAuthor').value = '';
+                    document.getElementById('reviewText').value = '';
+                    selectReviewStars(5);
+                    
+                    // Обновляем список отзывов и каталог
+                    await loadReviews(currentProduct.id);
+                    await loadProducts();
+                    
+                    // Обновляем текущий объект на случай изменения среднего балла
+                    const updated = products.find(p => p.id === currentProduct.id);
+                    if(updated) {
+                        currentProduct = updated;
+                        const ratingValue = parseFloat(currentProduct.rating || 5.0).toFixed(1);
+                        let ratingHTML = `<div class="flex text-amber-500 text-xs gap-0.5">`;
+                        for (let r = 1; r <= 5; r++) {
+                            ratingHTML += r <= Math.round(ratingValue) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+                        }
+                        ratingHTML += `</div><span class="text-xs font-black text-slate-800">${ratingValue}</span><span class="text-xs text-slate-400">| ${currentProduct.reviews_count || 0} отзывов</span>`;
+                        document.getElementById('mRatingBlock').innerHTML = ratingHTML;
+                    }
+                } else {
+                    showToast('Ошибка при отправке отзыва');
+                }
+            } catch (e) {
+                showToast('Ошибка сети');
+            }
+        }
+
+        // --- АДМИН ПАНЕЛЬ ---
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const val = e.target.value;
+            if(val === SECRET_CODE) { 
+                openAdminPanel(); 
+                e.target.value = ''; 
+                e.target.blur(); 
+            } else { 
+                renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
+            }
+        });
+
         document.getElementById('aPhotos').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files).slice(0, 10);
             for (let file of files) { uploadedImages.push(await resizeImage(file)); }
@@ -879,9 +823,9 @@
         function renderPhotoPreview() {
             const container = document.getElementById('photoPreviewContainer');
             container.innerHTML = uploadedImages.map((img, idx) => `
-                <div class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                <div class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                     <img src="${img}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
                         <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
                         ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
@@ -921,16 +865,14 @@
 
         document.getElementById('addForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            if(uploadedImages.length === 0) { showNotification('Загрузите хотя бы 1 фото устройства', true); return; }
-
-            const cat = document.getElementById('aCat').value;
+            if(uploadedImages.length === 0) { showToast('Загрузите хотя бы 1 фотографию'); return; }
 
             const prod = {
                 id: editMode ? editProductId : 'p' + Date.now(), 
                 name: document.getElementById('aName').value, 
                 price: parseFloat(document.getElementById('aPrice').value),
                 description: document.getElementById('aDesc').value, 
-                category: cat, 
+                category: document.getElementById('aCat').value, 
                 images: uploadedImages,
                 isAvailable: 1
             };
@@ -945,19 +887,19 @@
         function renderAdminList() {
             const list = document.getElementById('adminList');
             list.innerHTML = products.map(p => `
-                <div class="bg-white border border-gray-200 p-3 rounded-xl mb-3 shadow-sm">
+                <div class="bg-white border border-slate-200 p-3 rounded-2xl mb-3 shadow-sm hover:shadow transition-shadow">
                     <div class="flex gap-3">
-                        <img src="${p.images[0]}" class="w-16 h-16 object-contain rounded-lg bg-gray-100 border shrink-0">
+                        <img src="${p.images[0]}" class="w-14 h-14 object-cover rounded-xl bg-slate-100 border border-slate-100 shrink-0">
                         <div class="flex-1 min-w-0 pr-1">
-                            <div class="font-bold text-sm truncate mb-0.5" title="${p.name}">${p.name}</div>
-                            <div class="text-blue-600 font-bold text-xs mb-1">${formatMoney(p.price)}</div>
-                            <div class="text-[10px] text-gray-500 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
+                            <div class="font-black text-xs truncate mb-0.5 text-slate-900" title="${p.name}">${p.name}</div>
+                            <div class="text-blue-600 font-extrabold text-xs mb-1">${formatMoney(p.price)}</div>
+                            <div class="text-[9px] text-slate-400 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
                         </div>
                         <div class="flex flex-col gap-1 items-end shrink-0">
-                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="w-[85px] py-1.5 rounded-md text-[9px] font-bold border transition-colors ${p.isAvailable ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}">${p.isAvailable ? 'В НАЛИЧИИ' : 'НЕТ В НАЛ.'}</button>
+                            <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="w-[85px] py-1.5 rounded-lg text-[9px] font-black border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'}">${p.isAvailable ? 'АКТИВЕН' : 'СКЛАД ПУСТ'}</button>
                             <div class="flex gap-1 mt-1 w-[85px]">
-                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-md h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
+                                <button onclick="editProduct('${p.id}')" class="flex-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg h-7 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" class="flex-1 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg h-7 flex items-center justify-center transition-colors"><i class="fas fa-trash text-xs"></i></button>
                             </div>
                         </div>
                     </div>
@@ -966,41 +908,25 @@
         }
 
         function formatMoney(n) { return new Intl.NumberFormat('ru-RU').format(n) + ' сум'; }
-        
         function translateCat(c) { 
-            const map={
-                'Peripherals': 'Периферия',
-                'Cameras': 'Видеонаблюдение',
-                'Network': 'Сетевое оборудование'
-            }; 
-            return map[c] || c; 
+            const map={'Peripherals':'Периферия','Cameras':'Видеонаблюдение','Network':'Сетевое оборудование'}; 
+            return map[c]||c; 
         }
-        
-        function toggleCart() { 
-            document.getElementById('cartOverlay').classList.toggle('hidden'); 
-            document.getElementById('cartPanel').classList.toggle('translate-x-full'); 
-        }
-        
-        function openAdminPanel() { 
-            renderAdminList(); 
-            document.getElementById('adminModal').classList.remove('hidden'); 
-        }
-        
-        function closeAdmin() { 
-            document.getElementById('adminModal').classList.add('hidden'); 
-        }
+        function toggleCart() { document.getElementById('cartOverlay').classList.toggle('hidden'); document.getElementById('cartPanel').classList.toggle('translate-x-full'); }
+        function openAdminPanel() { renderAdminList(); document.getElementById('adminModal').classList.remove('hidden'); }
+        function closeAdmin() { document.getElementById('adminModal').classList.add('hidden'); }
         
         function filter(cat) { 
             document.querySelectorAll('.cat-btn').forEach(b => {
-                b.className = 'cat-btn bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all';
-                
-                const isAllAndMatch = (cat === 'All' && b.innerText.includes('Все'));
-                const isPerAndMatch = (cat === 'Peripherals' && b.innerText.includes('Периферия'));
-                const isCamAndMatch = (cat === 'Cameras' && b.innerText.includes('Видеонаблюдение'));
-                const isNetAndMatch = (cat === 'Network' && b.innerText.includes('Сетевое'));
-
-                if (isAllAndMatch || isPerAndMatch || isCamAndMatch || isNetAndMatch) {
-                    b.className = 'cat-btn bg-blue-600 text-white px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md transition-all';
+                b.className = 'cat-btn bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap hover:border-slate-400';
+                if (cat === 'All' && b.innerText.includes('Все')) {
+                    b.className = 'cat-btn bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm';
+                } else if (cat === 'Peripherals' && b.innerText.includes('Периферия')) {
+                    b.className = 'cat-btn bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm';
+                } else if (cat === 'Cameras' && b.innerText.includes('Видеонаблюдение')) {
+                    b.className = 'cat-btn bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm';
+                } else if (cat === 'Network' && b.innerText.includes('Сетевое')) {
+                    b.className = 'cat-btn bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm';
                 }
             });
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
