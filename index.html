@@ -259,19 +259,10 @@
 
         document.addEventListener('click', (e) => {
             const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-              searchInput.addEventListener('input', (e) => {
-                const val = (e.target.value || '').trim();
-                if (val === SECRET_CODE) {
-                  openAdminPanel();
-                  e.target.value = '';
-                  e.target.blur();
-                } else {
-                    renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase())));
-                }
-              });
-            } else {
-              console.warn('searchInput not found');
+            if(!searchInput) return;
+            const searchContainer = searchInput.parentElement;
+            if (!searchContainer.contains(e.target) && document.activeElement === searchInput) {
+                searchInput.blur();
             }
         });
 
