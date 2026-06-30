@@ -60,14 +60,14 @@ class DBManager:
         return conn
 
     def init_db(self):
-        conn = self.get_conn()
-        cur = conn.cursor()
-        
         id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
         json_type = "JSONB" if self.is_pg else "TEXT"
 
-        # Таблица продуктов
-        cur.execute(f"""
+        # Запросы создания таблиц. Выполняем каждый запрос в отдельном подключении/транзакции,
+        # чтобы возможные ошибки в одном запросе не блокировали другие (критично для PostgreSQL).
+        statements = [
+            # 1. Таблица продуктов
+            f"""
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -78,10 +78,9 @@ class DBManager:
                 is_available INTEGER DEFAULT 1,
                 rating REAL DEFAULT 5.0
             )
-        """)
-
-        # Таблица отзывов
-        cur.execute(f"""
+            """,
+            # 2. Таблица отзывов
+            f"""
             CREATE TABLE IF NOT EXISTS reviews (
                 id {id_serial},
                 product_id TEXT,
@@ -90,10 +89,9 @@ class DBManager:
                 review_text TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        
-        # Таблица заказов
-        cur.execute(f"""
+            """,
+            # 3. Таблица заказов
+            f"""
             CREATE TABLE IF NOT EXISTS orders (
                 id {id_serial},
                 user_id BIGINT,
@@ -104,49 +102,69 @@ class DBManager:
                 total REAL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+            """
+        ]
 
-        # Автоматическая миграция (Добавление рейтинга в старую таблицу продуктов, если она была)
+        for stmt in statements:
+            conn = self.get_conn()
+            cur = conn.cursor()
+            try:
+                cur.execute(stmt)
+                conn.commit()
+            except Exception as e:
+                log.error(f"❌ Ошибка выполнения запроса инициализации: {e}")
+                conn.rollback()
+            finally:
+                conn.close()
+
+        # Автоматическая миграция (добавление колонки rating в таблицу products, если она старая)
+        # Выполняем в полностью изолированной транзакции
+        conn = self.get_conn()
+        cur = conn.cursor()
         try:
-            cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS rating REAL DEFAULT 5.0")
+            cur.execute("ALTER TABLE products ADD COLUMN rating REAL DEFAULT 5.0")
+            conn.commit()
+            log.info("✅ Колонка 'rating' успешно интегрирована в структуру таблицы 'products'.")
         except Exception:
-            pass # Если колонка уже существовала, или SQLite не поддерживает IF NOT EXISTS, пропускаем
-
-        conn.commit()
-        conn.close()
+            # Если колонка уже существует, PostgreSQL вернет ошибку. Мы её просто логируем и откатываем транзакцию.
+            conn.rollback()
+            log.info("ℹ️ Структура таблицы 'products' актуальна (колонка 'rating' уже присутствует).")
+        finally:
+            conn.close()
 
     def get_products(self):
         conn = self.get_conn()
         cur = conn.cursor()
-        
-        # Запрос с подсчетом количества отзывов и динамического среднего рейтинга
-        sql = """
-            SELECT p.*, 
-                   COALESCE((SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id), 0) as reviews_count,
-                   COALESCE((SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.id), 5.0) as calculated_rating
-            FROM products p
-        """
-        cur.execute(sql)
-        rows = cur.fetchall()
-        res = []
-        for r in rows:
-            images = r['images']
-            if isinstance(images, str): 
-                images = json.loads(images)
-            
-            res.append({
-                "id": r['id'], 
-                "name": r['name'], 
-                "price": r['price'],
-                "description": r['description'], 
-                "category": r['category'],
-                "images": images, 
-                "isAvailable": bool(r['is_available']),
-                "rating": r['calculated_rating'],
-                "reviews_count": r['reviews_count']
-            })
-        conn.close()
-        return res
+        try:
+            # Запрос с динамическим подсчетом количества отзывов и вычислением среднего рейтинга
+            sql = """
+                SELECT p.*, 
+                       COALESCE((SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id), 0) as reviews_count,
+                       COALESCE((SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.id), 5.0) as calculated_rating
+                FROM products p
+            """
+            cur.execute(sql)
+            rows = cur.fetchall()
+            res = []
+            for r in rows:
+                images = r['images']
+                if isinstance(images, str): 
+                    images = json.loads(images)
+                
+                res.append({
+                    "id": r['id'], 
+                    "name": r['name'], 
+                    "price": r['price'],
+                    "description": r['description'], 
+                    "category": r['category'],
+                    "images": images, 
+                    "isAvailable": bool(r['is_available']),
+                    "rating": r['calculated_rating'],
+                    "reviews_count": r['reviews_count']
+                })
+            return res
+        finally:
+            conn.close()
 
     def save_product(self, p):
         conn = self.get_conn()
@@ -155,87 +173,92 @@ class DBManager:
         
         images_json = json.dumps(p['images'])
         
-        if self.is_pg:
-            sql = f"""
-                INSERT INTO products (id, name, price, description, category, images, is_available)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
-                ON CONFLICT (id) DO UPDATE SET 
-                name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
-                category=EXCLUDED.category, images=EXCLUDED.images, is_available=EXCLUDED.is_available
-            """
-            cur.execute(sql, (
-                p['id'], p['name'], p['price'], p.get('description', ''), 
-                p['category'], images_json, int(p['isAvailable'])
-            ))
-        else:
-            sql = f"""
-                INSERT OR REPLACE INTO products (id, name, price, description, category, images, is_available)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
-            """
-            cur.execute(sql, (
-                p['id'], p['name'], p['price'], p.get('description', ''), 
-                p['category'], images_json, int(p['isAvailable'])
-            ))
-            
-        conn.commit()
-        conn.close()
+        try:
+            if self.is_pg:
+                sql = f"""
+                    INSERT INTO products (id, name, price, description, category, images, is_available)
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                    ON CONFLICT (id) DO UPDATE SET 
+                    name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
+                    category=EXCLUDED.category, images=EXCLUDED.images, is_available=EXCLUDED.is_available
+                """
+                cur.execute(sql, (
+                    p['id'], p['name'], p['price'], p.get('description', ''), 
+                    p['category'], images_json, int(p['isAvailable'])
+                ))
+            else:
+                sql = f"""
+                    INSERT OR REPLACE INTO products (id, name, price, description, category, images, is_available)
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                """
+                cur.execute(sql, (
+                    p['id'], p['name'], p['price'], p.get('description', ''), 
+                    p['category'], images_json, int(p['isAvailable'])
+                ))
+            conn.commit()
+        finally:
+            conn.close()
 
     def delete_product(self, pid):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        cur.execute(f"DELETE FROM products WHERE id={ph}", (pid,))
-        # Удаляем также связанные отзывы
-        cur.execute(f"DELETE FROM reviews WHERE product_id={ph}", (pid,))
-        conn.commit()
-        conn.close()
+        try:
+            cur.execute(f"DELETE FROM products WHERE id={ph}", (pid,))
+            cur.execute(f"DELETE FROM reviews WHERE product_id={ph}", (pid,))
+            conn.commit()
+        finally:
+            conn.close()
     
     def toggle_stock(self, pid, status):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        cur.execute(f"UPDATE products SET is_available={ph} WHERE id={ph}", (int(status), pid))
-        conn.commit()
-        conn.close()
+        try:
+            cur.execute(f"UPDATE products SET is_available={ph} WHERE id={ph}", (int(status), pid))
+            conn.commit()
+        finally:
+            conn.close()
 
     def add_review(self, product_id, user_name, rating, review_text):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        
-        cur.execute(f"""
-            INSERT INTO reviews (product_id, user_name, rating, review_text) 
-            VALUES ({ph},{ph},{ph},{ph})
-        """, (product_id, user_name, rating, review_text))
-        
-        # Обновляем средний рейтинг в таблице продуктов
-        cur.execute(f"""
-            UPDATE products 
-            SET rating = (SELECT AVG(rating) FROM reviews WHERE product_id = {ph})
-            WHERE id = {ph}
-        """, (product_id, product_id))
-        
-        conn.commit()
-        conn.close()
+        try:
+            cur.execute(f"""
+                INSERT INTO reviews (product_id, user_name, rating, review_text) 
+                VALUES ({ph},{ph},{ph},{ph})
+            """, (product_id, user_name, rating, review_text))
+            
+            cur.execute(f"""
+                UPDATE products 
+                SET rating = (SELECT AVG(rating) FROM reviews WHERE product_id = {ph})
+                WHERE id = {ph}
+            """, (product_id, product_id))
+            conn.commit()
+        finally:
+            conn.close()
 
     def get_reviews(self, product_id):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        cur.execute(f"SELECT * FROM reviews WHERE product_id={ph} ORDER BY id DESC", (product_id,))
-        rows = cur.fetchall()
-        reviews = []
-        for r in rows:
-            reviews.append({
-                "id": r['id'],
-                "product_id": r['product_id'],
-                "user_name": r['user_name'],
-                "rating": r['rating'],
-                "review_text": r['review_text'],
-                "created_at": str(r['created_at'])
-            })
-        conn.close()
-        return reviews
+        try:
+            cur.execute(f"SELECT * FROM reviews WHERE product_id={ph} ORDER BY id DESC", (product_id,))
+            rows = cur.fetchall()
+            reviews = []
+            for r in rows:
+                reviews.append({
+                    "id": r['id'],
+                    "product_id": r['product_id'],
+                    "user_name": r['user_name'],
+                    "rating": r['rating'],
+                    "review_text": r['review_text'],
+                    "created_at": str(r['created_at'])
+                })
+            return reviews
+        finally:
+            conn.close()
 
     def add_order(self, uid, uname, phone, addr, items, total):
         conn = self.get_conn()
@@ -244,41 +267,49 @@ class DBManager:
         items_json = json.dumps(items)
         db_uid = None if uid == 0 else uid
         
-        if self.is_pg:
-            cur.execute(f"""
-                INSERT INTO orders (user_id, user_name, phone, address, items, total) 
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph}) RETURNING id
-            """, (db_uid, uname, phone, addr, items_json, total))
-            row = cur.fetchone()
-            oid = row['id'] if isinstance(row, dict) else row[0]
-        else:
-            cur.execute(f"""
-                INSERT INTO orders (user_id, user_name, phone, address, items, total) 
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
-            """, (db_uid, uname, phone, addr, items_json, total))
-            oid = cur.lastrowid
-            
-        conn.commit()
-        conn.close()
-        return oid
+        try:
+            if self.is_pg:
+                cur.execute(f"""
+                    INSERT INTO orders (user_id, user_name, phone, address, items, total) 
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph}) RETURNING id
+                """, (db_uid, uname, phone, addr, items_json, total))
+                row = cur.fetchone()
+                oid = row['id'] if isinstance(row, dict) else row[0]
+            else:
+                cur.execute(f"""
+                    INSERT INTO orders (user_id, user_name, phone, address, items, total) 
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
+                """, (db_uid, uname, phone, addr, items_json, total))
+                oid = cur.lastrowid
+            conn.commit()
+            return oid
+        finally:
+            conn.close()
     
     def list_user_orders(self, uid, limit=5):
         conn = self.get_conn()
         cur = conn.cursor()
         ph = "%s" if self.is_pg else "?"
-        cur.execute(f"SELECT * FROM orders WHERE user_id={ph} ORDER BY id DESC LIMIT {limit}", (uid,))
-        rows = cur.fetchall()
-        orders = []
-        for r in rows:
-            orders.append({"id": r['id'], "total": r['total'], "created_at": r['created_at']})
-        conn.close()
-        return orders
+        try:
+            cur.execute(f"SELECT * FROM orders WHERE user_id={ph} ORDER BY id DESC LIMIT {limit}", (uid,))
+            rows = cur.fetchall()
+            orders = []
+            for r in rows:
+                orders.append({"id": r['id'], "total": r['total'], "created_at": r['created_at']})
+            return orders
+        finally:
+            conn.close()
 
 db = DBManager()
 
 # --- 3. ВЕБ-СЕРВЕР (API) ---
 async def api_get_products(request):
-    return web.json_response(db.get_products())
+    try:
+        products_list = db.get_products()
+        return web.json_response(products_list)
+    except Exception as e:
+        log.error(f"🔥 Ошибка во время выполнения API get_products: {e}", exc_info=True)
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 async def api_save_product(request):
     try:
@@ -290,19 +321,31 @@ async def api_save_product(request):
         return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 async def api_delete_product(request):
-    pid = request.match_info['id']
-    db.delete_product(pid)
-    return web.json_response({"status": "ok"})
+    try:
+        pid = request.match_info['id']
+        db.delete_product(pid)
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        log.error(f"Delete error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 async def api_toggle_stock(request):
-    data = await request.json()
-    db.toggle_stock(data['id'], data['status'])
-    return web.json_response({"status": "ok"})
+    try:
+        data = await request.json()
+        db.toggle_stock(data['id'], data['status'])
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        log.error(f"Toggle stock error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 # Новые эндпоинты для отзывов
 async def api_get_reviews(request):
-    product_id = request.match_info['pid']
-    return web.json_response(db.get_reviews(product_id))
+    try:
+        product_id = request.match_info['pid']
+        return web.json_response(db.get_reviews(product_id))
+    except Exception as e:
+        log.error(f"Get reviews error: {e}")
+        return web.json_response([], status=500)
 
 async def api_add_review(request):
     try:
