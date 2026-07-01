@@ -324,12 +324,22 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <script>
-        // Инициализация Telegram WebApp с проверкой на существование
+        // Инициализация Telegram WebApp с глубокой проверкой окружения
         let tg = null;
         let isTelegram = false;
         try {
             tg = window.Telegram?.WebApp || null;
-            isTelegram = !!(tg && tg.initData);
+            if (tg) {
+                // Если запущены внутри Telegram (мобильный клиент, десктоп или веб-клиент),
+                // параметр platform никогда не равен 'unknown'
+                if (tg.platform && tg.platform !== 'unknown') {
+                    isTelegram = true;
+                } else if (tg.initData && tg.initData !== '') {
+                    isTelegram = true;
+                } else if (tg.initDataUnsafe && Object.keys(tg.initDataUnsafe).length > 0) {
+                    isTelegram = true;
+                }
+            }
         } catch (e) {
             console.error("Не удалось инициализировать Telegram WebApp SDK:", e);
         }
@@ -574,7 +584,7 @@
             if(cart.length === 0) return;
             
             if (isTelegram && tg) {
-                // Если мы в Telegram, кнопка MainButton шлет данные обратно в бот
+                // Если мы запущены внутри Telegram, то отправляем данные в чат-бот напрямую
                 const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
                 const data = { 
                     total_price: total, 
@@ -588,11 +598,11 @@
                 try {
                     tg.sendData(JSON.stringify(data));
                 } catch (e) {
-                    console.error("Ошибка tg.sendData, открываем модалку", e);
+                    console.error("Критическая ошибка отправки sendData, показываем модалку как резерв", e);
                     toggleCheckoutModal();
                 }
             } else {
-                // Если открыли просто в браузере (вне Telegram), открываем модальное окно на сайте
+                // Если открыли в обычном браузере, показываем форму прямо на сайте
                 toggleCheckoutModal();
             }
         }
@@ -657,11 +667,13 @@
                     try {
                         tg.MainButton.setParams({
                             text: `ОФОРМИТЬ: ${formatMoney(total)}`,
-                            color: '#2563eb', // Синий цвет кнопки
-                            text_color: '#ffffff', // Белый цвет текста
+                            color: '#2563eb', // Насыщенный синий цвет
+                            text_color: '#ffffff',
                             is_active: true,
                             is_visible: true
                         });
+                        tg.MainButton.show();
+                        tg.MainButton.enable();
                     } catch (e) {
                         console.error("Ошибка при настройке MainButton:", e);
                         tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
@@ -895,17 +907,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (tg) {
                 try {
-                    tg.ready();  // КРИТИЧНО для инициализации WebApp на мобильных устройствах
-                    tg.expand(); // Расширяет WebApp на весь экран
+                    tg.ready();  // Оповещаем ТГ о готовности интерфейса
+                    tg.expand(); // Расширяем окно мини-аппа на максимум
                     
-                    // Регистрация обработчика клика по нативной кнопке
+                    // Регистрация нативного события клика по синей кнопке внизу Telegram
                     tg.onEvent('mainButtonClicked', sendOrder);
                 } catch(e) {
                     console.error("Ошибка при инициализации API Telegram:", e);
                 }
             }
 
-            // Автозаполнение имени пользователя из Telegram
+            // Автозаполнение имени пользователя из данных Telegram
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 const user = tg.initDataUnsafe.user;
                 const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
