@@ -6,6 +6,15 @@ import sqlite3
 from aiohttp import web
 from dotenv import load_dotenv
 
+# Подключение aiogram в начале для глобального создания экземпляра бота
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.enums import ParseMode
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+
 # Подключение PostgreSQL (для Render/Neon)
 try:
     import psycopg2
@@ -15,7 +24,7 @@ except ImportError:
 
 load_dotenv()
 
-# --- 1. НАСТРОЙКИ (Больше не нужен config.py!) ---
+# --- 1. НАСТРОЙКИ ---
 class Settings:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     ADMIN_ID = os.getenv("ADMIN_ID")
@@ -26,6 +35,9 @@ class Settings:
 settings = Settings()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(message)s")
 log = logging.getLogger("bot")
+
+# Глобальная инициализация бота для использования в веб-обработчиках
+bot = Bot(token=settings.BOT_TOKEN)
 
 # --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
 class DBManager:
@@ -240,6 +252,51 @@ async def api_toggle_size(request):
     db.toggle_size_stock(data['id'], data['size'], data['status'])
     return web.json_response({"status": "ok"})
 
+# НОВЫЙ ЭНДПОИНТ: Приём заказов прямо через API сайта
+async def api_create_order(request):
+    try:
+        data = await request.json()
+        name = data.get('name')
+        phone = data.get('phone')
+        address = data.get('address')
+        items = data.get('items', [])
+        total = data.get('total_price', 0)
+        user_id = int(data.get('user_id', 0))
+        
+        # Сохранение заказа в базу данных
+        order_id = db.add_order(user_id, name, phone, address, items, total)
+        
+        # Моментальная отправка сообщения админу в Telegram
+        if settings.ADMIN_ID:
+            # Ссылка на Telegram-аккаунт пользователя, если он зашел через WebApp
+            client_ref = f"<a href='tg://user?id={user_id}'>{name}</a>" if user_id > 0 else f"{name} (через Web)"
+            
+            admin_msg = (
+                f"🆕 <b>ПОЛУЧЕН НОВЫЙ ЗАКАЗ №{order_id}</b>\n"
+                f"──────────────────\n"
+                f"👤 <b>Клиент:</b> {client_ref}\n"
+                f"📞 <b>Телефон:</b> <code>{phone}</code>\n"
+                f"📍 <b>Адрес:</b> {address}\n"
+                f"──────────────────\n"
+                f"📦 <b>Состав заказа:</b>\n"
+            )
+            for i in items:
+                size_info = f" ({i['size']})" if i.get('size') and i.get('size') != 'Standard' else ""
+                admin_msg += f"▪️ {i['name']}{size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
+            
+            admin_msg += f"──────────────────\n"
+            admin_msg += f"💰 <b>ИТОГО К ОПЛАТЕ: {total:,.0f} UZS</b>"
+
+            try:
+                await bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
+            except Exception as admin_err:
+                log.error(f"Не удалось отправить уведомление админу: {admin_err}")
+                
+        return web.json_response({"status": "ok", "order_id": order_id})
+    except Exception as e:
+        log.error(f"Ошибка сохранения заказа через сайт: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
 async def serve_index(request):
     try:
         with open("index.html", "r", encoding="utf-8") as f:
@@ -248,14 +305,6 @@ async def serve_index(request):
         return web.Response(text="index.html not found", status=404)
 
 # --- 4. ТЕЛЕГРАМ БОТ ---
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-
 class OrderFlow(StatesGroup):
     contact = State()
     address = State()
@@ -289,6 +338,7 @@ async def cmd_orders(m: Message):
         text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
 
+# Сохраняем старый обработчик WebApp Data (через клавиатуру TG) для обратной совместимости
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -381,11 +431,13 @@ async def main():
     app.router.add_post("/api/stock", api_toggle_stock)
     app.router.add_post("/api/size", api_toggle_size)
     
+    # Регистрация нового роута для прямой отправки заказов
+    app.router.add_post("/api/orders", api_create_order)
+    
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, '0.0.0.0', settings.PORT).start()
     
-    bot = Bot(token=settings.BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     
     dp.message.register(cmd_start, CommandStart())
