@@ -211,6 +211,54 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ ЗАКАЗА -->
+    <div id="checkoutModal" class="fixed inset-0 bg-black/60 z-[80] hidden backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this) toggleCheckoutModal()">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg uppercase tracking-tight text-gray-900">Данные доставки</h3>
+                <button onclick="toggleCheckoutModal()" class="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="checkoutForm" class="p-5 space-y-4" onsubmit="submitOrder(event)">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ваше Имя</label>
+                    <input type="text" id="orderName" required placeholder="Например: Иван" class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Номер телефона</label>
+                    <input type="tel" id="orderPhone" required placeholder="+998 (__) ___-__-__" class="w-full border-gray-200 border p-3 rounded-lg text-sm outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Адрес доставки</label>
+                    <textarea id="orderAddress" required placeholder="Город, улица, дом, ориентир..." class="w-full border-gray-200 border p-3 rounded-lg text-sm h-20 outline-none resize-none focus:border-blue-500"></textarea>
+                </div>
+                
+                <div class="pt-2">
+                    <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase shadow-blue-200 shadow-lg active:scale-95 transition-transform hover:bg-blue-700">
+                        Подтвердить заказ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО УСПЕШНОГО ОФОРМЛЕНИЯ -->
+    <div id="successModal" class="fixed inset-0 bg-black/60 z-[90] hidden backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 text-center shadow-2xl">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-check"></i>
+            </div>
+            <h3 class="font-black text-xl mb-2 uppercase tracking-tight text-gray-900">Заказ принят!</h3>
+            <p class="text-gray-600 text-sm mb-4 leading-relaxed">
+                Ваш заказ <b class="text-blue-600" id="successOrderId"></b> успешно оформлен. Менеджер свяжется с вами в ближайшее время!
+            </p>
+            <button onclick="closeSuccessModal()" class="w-full bg-black text-white py-3 rounded-xl font-bold uppercase shadow-md active:scale-95 transition-all hover:bg-gray-800">
+                Отлично
+            </button>
+        </div>
+    </div>
+
     <!-- АДМИН ПАНЕЛЬ -->
     <div id="adminModal" class="fixed inset-0 z-[100] bg-gray-100 hidden overflow-y-auto p-4 md:p-8">
         <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden pb-10">
@@ -290,6 +338,15 @@
         let editMode = false;
         let editProductId = null;
         let originalSizes = null;
+
+        // Автозаполнение имени из Telegram, если доступно
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+            if (fullName) {
+                document.getElementById('orderName').value = fullName;
+            }
+        }
 
         // Поиск
         document.addEventListener('click', (e) => {
@@ -468,7 +525,6 @@
             
             sizesContainer.innerHTML = sortedSizes.map(s => {
                 const avail = currentProduct.sizes[s];
-                // Квадратные кнопки (как на фото)
                 return `<button onclick="selectSize('${s}')" class="size-btn border border-gray-200 rounded-lg w-12 h-12 flex items-center justify-center text-sm font-medium transition-all hover:border-black ${!avail || !currentProduct.isAvailable ? 'opacity-30 cursor-not-allowed bg-gray-50 hover:border-gray-200' : 'bg-white text-gray-700'}" ${!avail || !currentProduct.isAvailable ? 'disabled' : ''} data-size="${s}">${s}</button>`;
             }).join('');
 
@@ -570,18 +626,50 @@
             }
 
             if (total > 0) {
-                tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
-                tg.MainButton.show();
-            } else { tg.MainButton.hide(); }
+                // Показываем нативную кнопку Telegram только если приложение открыто в Telegram
+                const isTelegram = tg && tg.initData && tg.initData.length > 0;
+                if (isTelegram) {
+                    tg.MainButton.setText(`ОФОРМИТЬ: ${formatMoney(total)}`);
+                    tg.MainButton.show();
+                } else {
+                    tg.MainButton.hide();
+                }
+            } else { 
+                tg.MainButton.hide(); 
+            }
         }
 
         function removeFromCart(idx) { cart.splice(idx, 1); updateCart(); }
 
+        // Переключение модалки оформления
+        function toggleCheckoutModal() {
+            document.getElementById('checkoutModal').classList.toggle('hidden');
+        }
+
+        // Клик на кнопку «Оформить заказ»
         function sendOrder() {
             if(cart.length === 0) return;
-            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            const data = { total_price: total, items: cart.map(i => ({ name: i.name, price: i.price, qty: i.qty, size: i.selectedSize })) };
-            tg.sendData(JSON.stringify(data));
+            
+            // Проверяем, запущено ли приложение в Telegram WebApp
+            const isTelegram = tg && tg.initData && tg.initData.length > 0;
+            
+            if (isTelegram) {
+                // Если мы в ТГ, отправляем данные в чат и закрываем WebApp
+                const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+                const data = { 
+                    total_price: total, 
+                    items: cart.map(i => ({ 
+                        name: i.name, 
+                        price: i.price, 
+                        qty: i.qty, 
+                        size: i.selectedSize 
+                    })) 
+                };
+                tg.sendData(JSON.stringify(data));
+            } else {
+                // Если мы открыты на обычном сайте, показываем веб-форму оформления
+                toggleCheckoutModal();
+            }
         }
         
         tg.onEvent('mainButtonClicked', sendOrder);
