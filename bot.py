@@ -67,7 +67,14 @@ class DBManager:
 
     def get_conn(self):
         if self.is_pg:
-            return psycopg2.connect(settings.DATABASE_URL, cursor_factory=RealDictCursor)
+            db_url = settings.DATABASE_URL
+            # Форсируем SSL-режим для безопасного подключения к Neon PostgreSQL
+            if "sslmode=" not in db_url:
+                if "?" in db_url:
+                    db_url += "&sslmode=require"
+                else:
+                    db_url += "?sslmode=require"
+            return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
         conn = sqlite3.connect("orders.db")
         conn.row_factory = sqlite3.Row
         return conn
@@ -79,6 +86,7 @@ class DBManager:
         id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
         json_type = "JSONB" if self.is_pg else "TEXT"
 
+        # Первичное создание таблиц
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
@@ -88,10 +96,7 @@ class DBManager:
                 category TEXT,
                 images {json_type},
                 sizes {json_type},
-                is_available INTEGER DEFAULT 1,
-                size_chart TEXT,
-                reviews {json_type} DEFAULT '[]',
-                ratings {json_type} DEFAULT '[]'
+                is_available INTEGER DEFAULT 1
             )
         """)
         
@@ -108,6 +113,23 @@ class DBManager:
             )
         """)
         conn.commit()
+
+        # САМОВОССТАНОВЛЕНИЕ: Проверяем и накатываем недостающие колонки в существующие таблицы
+        columns_to_migrate = [
+            ("size_chart", "TEXT"),
+            ("reviews", f"{json_type} DEFAULT '[]'"),
+            ("ratings", f"{json_type} DEFAULT '[]'")
+        ]
+        
+        for col_name, col_type in columns_to_migrate:
+            try:
+                cur.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_type}")
+                conn.commit()
+                log.info(f"⚙️ Самовосстановление БД: Успешно добавлена недостающая колонка {col_name}")
+            except Exception as e:
+                conn.rollback()
+                # Игнорируем ошибку, если колонка уже существует в базе
+                log.debug(f"Колонка {col_name} уже создана или миграция пропущена: {e}")
 
         # Автоматическая загрузка товаров (Seeding) в базу Neon, если она пуста
         cur.execute("SELECT COUNT(*) as count FROM products")
@@ -163,7 +185,7 @@ class DBManager:
                     "category": "Audio",
                     "description": "Беспроводные полноразмерные наушники с лучшим на рынке гибридным шумоподавлением. Чистый детализированный звук Hi-Res Audio.",
                     "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"Черный Carbon": {"stock": 12, "price": null}, "Белый Platinum": {"stock": 0, "price": null}},
+                    "sizes": {"Черный Carbon": {"stock": 12, "price": None}, "Белый Platinum": {"stock": 0, "price": None}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nТип,Полноразмерные\nШумоподавление,Активное (ANC)\nВремя работы,до 30 часов\nВерсия Bluetooth,5.3",
                     "reviews": [],
