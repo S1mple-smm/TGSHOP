@@ -331,6 +331,23 @@
         </div>
     </div>
 
+    <!-- МОДАЛКА РЕЗЕРВНОГО РУЧНОГО ВВОДА TELEGRAM ID ДЛЯ АДМИНИСТРАТОРА -->
+    <div id="adminAuthModal" class="fixed inset-0 bg-zinc-950/70 z-[105] hidden backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this) document.getElementById('adminAuthModal').classList.add('hidden')">
+        <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-sm p-6 shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
+            <h3 class="font-black text-zinc-950 text-center text-base mb-2">Авторизация администратора</h3>
+            <p class="text-zinc-500 text-[11px] text-center mb-5 leading-relaxed">
+                Telegram ID не определен автоматически (вы открыли сайт вне Telegram). Пожалуйста, введите ваш Telegram ID, указанный в настройках Render (ADMIN_ID):
+            </p>
+            <div class="mb-5">
+                <input type="text" id="manualAdminIdInput" placeholder="Например: 123456789" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-center text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all bg-zinc-50">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('adminAuthModal').classList.add('hidden')" class="flex-1 py-3.5 bg-zinc-100 text-zinc-700 rounded-lg md:rounded-xl text-xs font-bold transition-colors">Отмена</button>
+                <button onclick="submitManualAdminId()" class="flex-1 py-3.5 bg-blue-600 text-white rounded-lg md:rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-100 hover:bg-blue-700">Войти</button>
+            </div>
+        </div>
+    </div>
+
     <!-- МОДАЛКА ИЗМЕНЕНИЯ ОСТАТКА НА СКЛАДЕ -->
     <div id="stockModal" class="fixed inset-0 bg-zinc-950/70 z-[115] hidden backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-xs p-6 shadow-2xl border border-zinc-100 animate-slide-up">
@@ -560,19 +577,42 @@
                 console.error("Ошибка чтения Telegram ID:", err);
             }
 
+            userId = String(userId).trim();
+            if (userId === "") {
+                // Показываем резервную модалку ручного ввода, если ID не определен (например, в браузере)
+                document.getElementById('adminAuthModal').classList.remove('hidden');
+                return;
+            }
+
+            await verifyAdminId(userId);
+        }
+
+        // Ручной ввод ID администратора через форму в браузере
+        async function submitManualAdminId() {
+            const idInput = document.getElementById('manualAdminIdInput').value.trim();
+            if (idInput === "") {
+                showToast("Пожалуйста, введите ваш Telegram ID", "error");
+                return;
+            }
+            await verifyAdminId(idInput);
+        }
+
+        // Отправка ID на сервер для строгой верификации
+        async function verifyAdminId(id) {
             try {
                 const response = await fetch('/api/admin_check', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId })
+                    body: JSON.stringify({ user_id: id })
                 });
                 const result = await response.json();
                 if (result.is_admin) {
                     openAdminPanel();
                     showToast("Панель администратора открыта!", "success");
+                    document.getElementById('adminAuthModal').classList.add('hidden');
                 } else {
                     // Выводим развернутое сообщение с их текущим ID, чтобы они могли легко настроить Render
-                    showToast(result.msg || `Доступ ограничен. Ваш Telegram ID: ${userId || "не определен (откройте через бота в Telegram)"}`, "error");
+                    showToast(result.msg || `Доступ ограничен. Ваш Telegram ID: ${id}`, "error");
                 }
             } catch(e) {
                 showToast("Ошибка сети при проверке прав доступа", "error");
@@ -992,7 +1032,7 @@
             document.getElementById('mRatingStars').innerHTML = getStarsHtml(ratingObj.rating);
             
             const reviewsArr = currentProduct.reviews ? currentProduct.reviews.length : 0;
-            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsArr} отзывов`;
+            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsArr.length} отзывов`;
             document.getElementById('mPriceRaw').innerText = currentProduct.price.toFixed(2);
 
             const descEl = document.getElementById('mDesc');
@@ -1450,9 +1490,9 @@
                 <div class="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50 animate-slide-up">
                     <img src="${img}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-zinc-950/60 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
-                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
-                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
+                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-left"></i></button>` : ''}
+                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1.5 text-xs"><i class="fas fa-trash"></i></button>
+                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-right"></i></button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -1524,7 +1564,7 @@
                                         stock = (typeof rawStock === 'boolean') ? (rawStock ? 10 : 0) : (parseInt(rawStock) || 0);
                                     }
                                     return `
-                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
+                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
                                             ${s} (${stock} шт.${optPriceText})
                                         </button>
                                     `;
