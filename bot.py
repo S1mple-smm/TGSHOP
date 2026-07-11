@@ -59,6 +59,14 @@ class DBManager:
         else:
             log.info("✅ Библиотека psycopg2 успешно загружена")
         
+        # Безопасное логирование ADMIN_ID для отладки
+        admin_id_str = str(settings.ADMIN_ID or '').strip()
+        if not admin_id_str:
+            log.warning("⚠️ Переменная ADMIN_ID не настроена на Render! Доступ в админку временно открыт для всех ID.")
+        else:
+            masked_id = admin_id_str[:3] + "*" * (len(admin_id_str) - 5) + admin_id_str[-2:] if len(admin_id_str) > 5 else "***"
+            log.info(f"🔒 Переменная ADMIN_ID успешно считана: {masked_id}")
+
         if settings.DATABASE_URL and psycopg2:
             log.info("🚀 Успешное подключение к PostgreSQL (Neon)...")
         else:
@@ -520,22 +528,29 @@ async def api_create_order(request):
 async def api_admin_check(request):
     try:
         data = await request.json()
-        user_id = str(data.get('user_id', ''))
-        allowed_admin = str(settings.ADMIN_ID)
+        user_id = str(data.get('user_id', '')).strip()
+        allowed_admin = str(settings.ADMIN_ID or '').strip()
+        
+        # Детальный лог в консоль Render для отладки
+        log.info(f"Проверка входа. Полученный ID: '{user_id}' | Разрешенный ID: '{allowed_admin}'")
         
         # Если переменная ADMIN_ID на Render не настроена, временно пропускаем
         if not allowed_admin:
+            log.warning("ADMIN_ID на бэкенде пустой. Пропускаем по умолчанию.")
             return web.json_response({"is_admin": True})
             
         if user_id == allowed_admin:
+            log.info("Авторизация админа успешно пройдена.")
             return web.json_response({"is_admin": True})
             
+        log.warning(f"Отказ в доступе. ID '{user_id}' не совпадает с '{allowed_admin}'")
         return web.json_response({
             "is_admin": False, 
-            "msg": "Доступ заблокирован: Панель управления доступна только выбранному ID!"
+            "msg": f"Доступ заблокирован: Ваш ID ({user_id or 'не определен'}) не совпадает с ADMIN_ID!"
         })
     except Exception as e:
-        return web.json_response({"is_admin": False, "msg": str(e)}, status=400)
+        log.error(f"Ошибка проверки администратора: {e}")
+        return web.json_response({"is_admin": False, "msg": f"Ошибка сервера: {str(e)}"}, status=400)
 
 async def serve_index(request):
     try:
