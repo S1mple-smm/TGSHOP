@@ -454,7 +454,6 @@
                                         <i class="fas fa-cloud-upload-alt text-2xl"></i> 
                                         <span>Нажмите для выбора изображений</span>
                                     </div>
-                                end text-blue-500 pointer-events-none flex flex-col items-center gap-1.5 -->
                                 </div>
                                 <div id="photoPreviewContainer" class="grid grid-cols-4 gap-2.5 mt-3"></div>
                             </div>
@@ -551,7 +550,16 @@
 
         // Проверка прав администратора по Telegram ID на бэкенде
         async function openAdminPanelWithCheck() {
-            const userId = tg?.initDataUnsafe?.user?.id || "";
+            // Пытаемся безопасно считать Telegram ID пользователя
+            let userId = "";
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    userId = window.Telegram.WebApp.initDataUnsafe?.user?.id || "";
+                }
+            } catch (err) {
+                console.error("Ошибка чтения Telegram ID:", err);
+            }
+
             try {
                 const response = await fetch('/api/admin_check', {
                     method: 'POST',
@@ -563,10 +571,11 @@
                     openAdminPanel();
                     showToast("Панель администратора открыта!", "success");
                 } else {
-                    showToast(result.msg || "Доступ запрещен", "error");
+                    // Выводим развернутое сообщение с их текущим ID, чтобы они могли легко настроить Render
+                    showToast(result.msg || `Доступ ограничен. Ваш Telegram ID: ${userId || "не определен (откройте через бота в Telegram)"}`, "error");
                 }
             } catch(e) {
-                showToast("Ошибка проверки прав доступа", "error");
+                showToast("Ошибка сети при проверке прав доступа", "error");
             }
         }
 
@@ -753,21 +762,21 @@
         }
 
         function editProduct(id) {
-            const prod = products.find(p => p.id === id);
-            if (!prod) return;
+            const p = products.find(prod => prod.id === id);
+            if (!p) return;
             editMode = true;
-            editProductId = prod.id;
-            originalSizes = { ...prod.sizes };
+            editProductId = p.id;
+            originalSizes = { ...p.sizes };
 
-            document.getElementById('aName').value = prod.name;
-            document.getElementById('aPrice').value = prod.price;
-            document.getElementById('aCat').value = prod.category;
-            document.getElementById('aDesc').value = prod.description || '';
-            document.getElementById('aSizeChartText').value = prod.sizeChart || '';
+            document.getElementById('aName').value = p.name;
+            document.getElementById('aPrice').value = p.price;
+            document.getElementById('aCat').value = p.category;
+            document.getElementById('aDesc').value = p.description || '';
+            document.getElementById('aSizeChartText').value = p.sizeChart || '';
 
-            populateOptionsForm(prod.sizes);
+            populateOptionsForm(p.sizes);
 
-            uploadedImages = [...prod.images];
+            uploadedImages = [...p.images];
             renderPhotoPreview();
 
             const formWrapper = document.getElementById('formWrapper');
@@ -907,8 +916,8 @@
                 const starsHtml = getStarsHtml(ratingObj.rating);
                 
                 return `
-                    <div class="bg-white rounded-[24px] overflow-hidden border border-zinc-100 shadow-[0_4px_15px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" onclick="openProduct('${p.id}')">
-                        <div class="aspect-[1/1] relative bg-zinc-50 overflow-hidden shrink-0">
+                    <div class="bg-white rounded-xl md:rounded-[32px] overflow-hidden border border-zinc-100 shadow-[0_4px_15px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" onclick="openProduct('${p.id}')">
+                        <div class="aspect-[1/1] relative bg-zinc-50 overflow-hidden shrink-0 rounded-t-xl md:rounded-t-[32px]">
                             <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/400x400/f4f4f5/0066FF?text=No+Photo'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-zinc-950 text-white text-[9px] font-black tracking-widest uppercase px-3 py-1.5 rounded-full shadow-md">Нет в наличии</span></div>' : ''}
                         </div>
@@ -924,7 +933,7 @@
                             </div>
                             <div class="flex justify-between items-center mt-2 border-t border-zinc-100 pt-3">
                                 <span class="text-zinc-950 font-black text-xs sm:text-sm">${formatMoney(p.price)}</span>
-                                <span class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[10px]"><i class="fas fa-chevron-right"></i></span>
+                                <span class="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[11px]"><i class="fas fa-chevron-right"></i></span>
                             </div>
                         </div>
                     </div>
@@ -983,7 +992,7 @@
             document.getElementById('mRatingStars').innerHTML = getStarsHtml(ratingObj.rating);
             
             const reviewsArr = currentProduct.reviews ? currentProduct.reviews.length : 0;
-            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsArr.length} отзывов`;
+            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsArr} отзывов`;
             document.getElementById('mPriceRaw').innerText = currentProduct.price.toFixed(2);
 
             const descEl = document.getElementById('mDesc');
@@ -1492,9 +1501,9 @@
                             </div>
                             
                             <div class="flex gap-2 mt-3">
-                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'НА ВИ ТРИНЕ' : 'ПРОДАН'}</button>
-                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
+                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'НА ВИ ТРИНЕ' : 'ПРОДАН'}</button>
+                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1515,7 +1524,7 @@
                                         stock = (typeof rawStock === 'boolean') ? (rawStock ? 10 : 0) : (parseInt(rawStock) || 0);
                                     }
                                     return `
-                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
+                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
                                             ${s} (${stock} шт.${optPriceText})
                                         </button>
                                     `;
@@ -1564,9 +1573,9 @@
         
         function filter(cat) { 
             document.querySelectorAll('.cat-btn').forEach(b => {
-                b.className = 'cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all';
+                b.className = 'cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all';
                 if(b.innerText.includes(cat === 'All' ? 'Все' : (cat==='Phones'?'Смартфоны':(cat==='Laptops'?'Ноутбуки':(cat==='Audio'?'Наушники':(cat==='Accessories'?'Аксессуары':'')))))) {
-                    b.className = 'cat-btn bg-zinc-950 text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all';
+                    b.className = 'cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all';
                 }
             });
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
