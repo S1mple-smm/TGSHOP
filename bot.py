@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sqlite3
+from datetime import datetime
 from aiohttp import web
 from dotenv import load_dotenv
 
@@ -15,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-# Подключение PostgreSQL (для Render/Neon)
+# Подключение PostgreSQL (для Neon)
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
@@ -39,7 +40,7 @@ log = logging.getLogger("bot")
 # Глобальная инициализация бота для использования в веб-обработчиках
 bot = Bot(token=settings.BOT_TOKEN)
 
-# --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
+# --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ (PostgreSQL Neon Tech) ---
 class DBManager:
     def __init__(self):
         self.check_connection_status()
@@ -59,9 +60,9 @@ class DBManager:
             log.info("✅ Библиотека psycopg2 успешно загружена")
         
         if settings.DATABASE_URL and psycopg2:
-            log.info("🚀 Подключаемся к PostgreSQL (Neon)...")
+            log.info("🚀 Успешное подключение к PostgreSQL (Neon)...")
         else:
-            log.warning("⚠️ ПЕРЕКЛЮЧЕНИЕ НА SQLite (Файловая база)")
+            log.warning("⚠️ ПЕРЕКЛЮЧЕНИЕ НА SQLite (Запасной вариант)")
         print("------------------------------------------------")
 
     def get_conn(self):
@@ -88,7 +89,9 @@ class DBManager:
                 images {json_type},
                 sizes {json_type},
                 is_available INTEGER DEFAULT 1,
-                size_chart TEXT
+                size_chart TEXT,
+                reviews {json_type} DEFAULT '[]',
+                ratings {json_type} DEFAULT '[]'
             )
         """)
         
@@ -105,6 +108,87 @@ class DBManager:
             )
         """)
         conn.commit()
+
+        # Автоматическая загрузка товаров (Seeding) в базу Neon, если она пуста
+        cur.execute("SELECT COUNT(*) as count FROM products")
+        count_val = cur.fetchone()
+        count = count_val['count'] if isinstance(count_val, dict) else count_val[0]
+
+        if count == 0:
+            log.info("База данных пуста. Производится наполнение девайсами WEISI TECH...")
+            default_products = [
+                {
+                    "id": "p_mario",
+                    "name": "Чехол Super Mario для iPad Pro 13 M4/M5",
+                    "price": 345000.0,
+                    "category": "Accessories",
+                    "description": "Качественный защитный чехол с уникальным ярким дизайном легендарного Супер Марио. Идеально садится на iPad Pro 13 (процессоры M4 и M5). Имеет удобную складывающуюся подставку и отделение под Apple Pencil.",
+                    "images": ["https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&q=80&w=600"],
+                    "sizes": {"Красный": 15, "Синий": 5},
+                    "isAvailable": True,
+                    "sizeChart": "Характеристика,Значение\nСовместимость,iPad Pro 13 M4/M5\nМатериал,Силикон / Микрофибра\nПринт,Супер Марио\nВес,180 г",
+                    "reviews": [],
+                    "ratings": [5, 5, 5]
+                },
+                {
+                    "id": "mock1",
+                    "name": "Смартфон WEISI Phone 15 Ultra 512GB",
+                    "price": 14500000.0,
+                    "category": "Phones",
+                    "description": "Флагманский девайс с потрясающим 120Hz LTPO-экраном, новейшим процессором 3-нм класса и улучшенной оптической стабилизацией при съемке 8K видео.",
+                    "images": ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=600"],
+                    "sizes": {"128GB": 20, "256GB": 15, "512GB": 0},
+                    "isAvailable": True,
+                    "sizeChart": "Характеристика,Значение\nЭкран,6.7\" OLED 120Hz\nПроцессор,Super M4 Pro\nПамять,512 GB\nКамера,108+48+12 Мп\nБатарея,5000 мАч",
+                    "reviews": [],
+                    "ratings": [5, 4, 5, 5]
+                },
+                {
+                    "id": "mock2",
+                    "name": "Ультрабук WEISI Book Pro 14 Slate",
+                    "price": 18900000.0,
+                    "category": "Laptops",
+                    "description": "Производительный и тонкий ноутбук в алюминиевом корпусе. Батарея держит до 18 часов воспроизведения видео. Бесшумное охлаждение.",
+                    "images": ["https://images.unsplash.com/photo-1496181130204-7552cc1524e2?auto=format&fit=crop&q=80&w=600"],
+                    "sizes": {"8GB / 256GB": 3, "16GB / 512GB": 10},
+                    "isAvailable": True,
+                    "sizeChart": "Характеристика,Значение\nЭкран,14.2\" Liquid Retina XDR\nПроцессор,M3 Pro Max\nОЗУ,16 GB\nНакопитель,512 GB SSD",
+                    "reviews": [],
+                    "ratings": [5, 4, 5, 5]
+                },
+                {
+                    "id": "mock3",
+                    "name": "Наушники с шумоподавлением SoundMax Studio",
+                    "price": 2450000.0,
+                    "category": "Audio",
+                    "description": "Беспроводные полноразмерные наушники с лучшим на рынке гибридным шумоподавлением. Чистый детализированный звук Hi-Res Audio.",
+                    "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"],
+                    "sizes": {"Черный Carbon": 12, "Белый Platinum": 0},
+                    "isAvailable": True,
+                    "sizeChart": "Характеристика,Значение\nТип,Полноразмерные\nШумоподавление,Активное (ANC)\nВремя работы,до 30 часов\nВерсия Bluetooth,5.3",
+                    "reviews": [],
+                    "ratings": [5, 4, 5, 5]
+                }
+            ]
+            ph = "%s" if self.is_pg else "?"
+            for p in default_products:
+                images_json = json.dumps(p['images'])
+                sizes_json = json.dumps(p['sizes'])
+                reviews_json = json.dumps(p['reviews'])
+                ratings_json = json.dumps(p['ratings'])
+                
+                cur.execute(f"""
+                    INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                """, (
+                    p['id'], p['name'], p['price'], p['description'], 
+                    p['category'], images_json, sizes_json, 
+                    1 if p['isAvailable'] else 0, p['sizeChart'],
+                    reviews_json, ratings_json
+                ))
+            conn.commit()
+            log.info("Наполнение успешно завершено!")
+
         conn.close()
 
     def get_products(self):
@@ -116,14 +200,20 @@ class DBManager:
         for r in rows:
             images = r['images']
             sizes = r['sizes']
+            reviews = r['reviews'] if 'reviews' in dict(r).keys() else '[]'
+            ratings = r['ratings'] if 'ratings' in dict(r).keys() else '[]'
+            
             if isinstance(images, str): images = json.loads(images)
             if isinstance(sizes, str): sizes = json.loads(sizes)
+            if isinstance(reviews, str): reviews = json.loads(reviews)
+            if isinstance(ratings, str): ratings = json.loads(ratings)
             
             res.append({
                 "id": r['id'], "name": r['name'], "price": r['price'],
                 "description": r['description'], "category": r['category'],
                 "images": images, "sizes": sizes,
-                "isAvailable": bool(r['is_available']), "sizeChart": r['size_chart']
+                "isAvailable": bool(r['is_available']), "sizeChart": r['size_chart'],
+                "reviews": reviews, "ratings": ratings
             })
         conn.close()
         return res
@@ -136,23 +226,40 @@ class DBManager:
         images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
+        # Получаем текущие отзывы, чтобы случайно не стереть их при редактировании
+        cur.execute(f"SELECT reviews, ratings FROM products WHERE id={ph}", (p['id'],))
+        row = cur.fetchone()
+        if row:
+            reviews_json = json.dumps(row['reviews']) if not isinstance(row['reviews'], str) else row['reviews']
+            ratings_json = json.dumps(row['ratings']) if not isinstance(row['ratings'], str) else row['ratings']
+        else:
+            reviews_json = json.dumps([])
+            ratings_json = json.dumps([])
+
         if self.is_pg:
             sql = f"""
-                INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
                 ON CONFLICT (id) DO UPDATE SET 
                 name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
                 category=EXCLUDED.category, images=EXCLUDED.images, sizes=EXCLUDED.sizes,
                 is_available=EXCLUDED.is_available, size_chart=EXCLUDED.size_chart
             """
+            cur.execute(sql, (
+                p['id'], p['name'], p['price'], p.get('description', ''), 
+                p['category'], images_json, sizes_json, 
+                int(p['isAvailable']), p.get('sizeChart', ''),
+                reviews_json, ratings_json
+            ))
         else:
-            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
+            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
+            cur.execute(sql, (
+                p['id'], p['name'], p['price'], p.get('description', ''), 
+                p['category'], images_json, sizes_json, 
+                int(p['isAvailable']), p.get('sizeChart', ''),
+                reviews_json, ratings_json
+            ))
             
-        cur.execute(sql, (
-            p['id'], p['name'], p['price'], p.get('description', ''), 
-            p['category'], images_json, sizes_json, 
-            int(p['isAvailable']), p.get('sizeChart', '')
-        ))
         conn.commit()
         conn.close()
 
@@ -188,6 +295,40 @@ class DBManager:
             new_json = json.dumps(current_sizes)
             
             cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
+            conn.commit()
+        conn.close()
+
+    def add_feedback(self, pid, author, text, rating):
+        conn = self.get_conn()
+        cur = conn.cursor()
+        ph = "%s" if self.is_pg else "?"
+        
+        cur.execute(f"SELECT reviews, ratings FROM products WHERE id={ph}", (pid,))
+        row = cur.fetchone()
+        if row:
+            reviews = row['reviews']
+            ratings = row['ratings']
+            
+            if isinstance(reviews, str): reviews = json.loads(reviews)
+            elif reviews is None: reviews = []
+            
+            if isinstance(ratings, str): ratings = json.loads(ratings)
+            elif ratings is None: ratings = []
+            
+            if text:
+                date_str = datetime.now().strftime("%d.%m.%Y")
+                reviews.append({
+                    "author": author,
+                    "text": text,
+                    "date": date_str,
+                    "rating": rating
+                })
+            
+            ratings.append(rating)
+            
+            cur.execute(f"UPDATE products SET reviews={ph}, ratings={ph} WHERE id={ph}", (
+                json.dumps(reviews), json.dumps(ratings), pid
+            ))
             conn.commit()
         conn.close()
 
@@ -252,7 +393,22 @@ async def api_toggle_size(request):
     db.toggle_size_stock(data['id'], data['size'], data['status'])
     return web.json_response({"status": "ok"})
 
-# НОВЫЙ ЭНДПОИНТ: Приём заказов прямо через API сайта
+# Приём отзывов и оценок
+async def api_save_feedback(request):
+    try:
+        data = await request.json()
+        pid = data['id']
+        author = data['author']
+        text = data['text']
+        rating = int(data['rating'])
+        
+        db.add_feedback(pid, author, text, rating)
+        return web.json_response({"status": "ok"})
+    except Exception as e:
+        log.error(f"Feedback save error: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
+# Приём заказов прямо через API
 async def api_create_order(request):
     try:
         data = await request.json()
@@ -263,12 +419,10 @@ async def api_create_order(request):
         total = data.get('total_price', 0)
         user_id = int(data.get('user_id', 0))
         
-        # Сохранение заказа в базу данных
         order_id = db.add_order(user_id, name, phone, address, items, total)
         
         # Моментальная отправка сообщения админу в Telegram
         if settings.ADMIN_ID:
-            # Ссылка на Telegram-аккаунт пользователя, если он зашел через WebApp
             client_ref = f"<a href='tg://user?id={user_id}'>{name}</a>" if user_id > 0 else f"{name} (через Web)"
             
             admin_msg = (
@@ -302,7 +456,7 @@ async def serve_index(request):
         with open("index.html", "r", encoding="utf-8") as f:
             return web.Response(text=f.read(), content_type="text/html")
     except FileNotFoundError:
-        return web.Response(text="index.html not found", status=404)
+        return web.Response(text="index.html не найден на сервере", status=404)
 
 # --- 4. ТЕЛЕГРАМ БОТ ---
 class OrderFlow(StatesGroup):
@@ -323,10 +477,10 @@ def location_kb():
     return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Отправить геолокацию", request_location=True)], [KeyboardButton(text="⏩ Пропустить (введу вручную)")]], resize_keyboard=True, one_time_keyboard=True)
 
 async def cmd_start(m: Message):
-    await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в KOS Sport.\nНажмите кнопку ниже, чтобы открыть каталог 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+    await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в WEISI TECH.\nНажмите кнопку ниже, чтобы открыть каталог 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
 
 async def cmd_help(m: Message):
-    await m.answer("Команды:\n/start - Меню\n/orders - История заказов")
+    await m.answer("Команды:\n/start - Главное меню\n/orders - История заказов")
 
 async def cmd_orders(m: Message):
     orders = db.list_user_orders(m.from_user.id)
@@ -338,7 +492,6 @@ async def cmd_orders(m: Message):
         text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
 
-# Сохраняем старый обработчик WebApp Data (через клавиатуру TG) для обратной совместимости
 async def on_webapp_data(m: Message, state: FSMContext):
     try:
         data = json.loads(m.web_app_data.data)
@@ -430,8 +583,7 @@ async def main():
     app.router.add_delete("/api/products/{id}", api_delete_product)
     app.router.add_post("/api/stock", api_toggle_stock)
     app.router.add_post("/api/size", api_toggle_size)
-    
-    # Регистрация нового роута для прямой отправки заказов
+    app.router.add_post("/api/products/feedback", api_save_feedback)
     app.router.add_post("/api/orders", api_create_order)
     
     runner = web.AppRunner(app)
