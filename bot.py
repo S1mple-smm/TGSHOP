@@ -185,29 +185,39 @@ class DBManager:
                     "category": "Audio",
                     "description": "Беспроводные полноразмерные наушники с лучшим на рынке гибридным шумоподавлением. Чистый детализированный звук Hi-Res Audio.",
                     "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"Черный Carbon": {"stock": 12, "price": None}, "Белый Platinum": {"stock": 0, "price": None}},
+                    "sizes": {"Черный Carbon": {"stock": 12, "price": null}, "Белый Platinum": {"stock": 0, "price": null}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nТип,Полноразмерные\nШумоподавление,Активное (ANC)\nВремя работы,до 30 часов\nВерсия Bluetooth,5.3",
                     "reviews": [],
                     "ratings": [5, 4, 5, 5]
                 }
             ]
-            ph = "%s" if self.is_pg else "?"
             for p in default_products:
                 images_json = json.dumps(p['images'])
                 sizes_json = json.dumps(p['sizes'])
                 reviews_json = json.dumps(p['reviews'])
                 ratings_json = json.dumps(p['ratings'])
                 
-                cur.execute(f"""
-                    INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
-                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph::jsonb if self.is_pg else ph},{ph::jsonb if self.is_pg else ph},{ph},{ph},{ph::jsonb if self.is_pg else ph},{ph::jsonb if self.is_pg else ph})
-                """, (
-                    p['id'], p['name'], p['price'], p['description'], 
-                    p['category'], images_json, sizes_json, 
-                    1 if p['isAvailable'] else 0, p['sizeChart'],
-                    reviews_json, ratings_json
-                ))
+                if self.is_pg:
+                    cur.execute("""
+                        INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
+                        VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s::jsonb, %s::jsonb)
+                    """, (
+                        p['id'], p['name'], p['price'], p['description'], 
+                        p['category'], images_json, sizes_json, 
+                        1 if p['isAvailable'] else 0, p['sizeChart'],
+                        reviews_json, ratings_json
+                    ))
+                else:
+                    cur.execute("""
+                        INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        p['id'], p['name'], p['price'], p['description'], 
+                        p['category'], images_json, sizes_json, 
+                        1 if p['isAvailable'] else 0, p['sizeChart'],
+                        reviews_json, ratings_json
+                    ))
             conn.commit()
             log.info("Наполнение успешно завершено!")
 
@@ -243,12 +253,14 @@ class DBManager:
     def save_product(self, p):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
         
         images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
-        cur.execute(f"SELECT reviews, ratings FROM products WHERE id={ph}", (p['id'],))
+        if self.is_pg:
+            cur.execute("SELECT reviews, ratings FROM products WHERE id=%s", (p['id'],))
+        else:
+            cur.execute("SELECT reviews, ratings FROM products WHERE id=?", (p['id'],))
         row = cur.fetchone()
         if row:
             reviews_json = json.dumps(row['reviews']) if not isinstance(row['reviews'], str) else row['reviews']
@@ -258,9 +270,9 @@ class DBManager:
             ratings_json = json.dumps([])
 
         if self.is_pg:
-            sql = f"""
+            sql = """
                 INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph}::jsonb,{ph::jsonb},{ph},{ph},{ph}::jsonb,{ph}::jsonb)
+                VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s::jsonb, %s::jsonb)
                 ON CONFLICT (id) DO UPDATE SET 
                 name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
                 category=EXCLUDED.category, images=EXCLUDED.images, sizes=EXCLUDED.sizes,
@@ -273,7 +285,10 @@ class DBManager:
                 reviews_json, ratings_json
             ))
         else:
-            sql = f"INSERT OR REPLACE INTO products VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})"
+            sql = """
+                INSERT OR REPLACE INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
             cur.execute(sql, (
                 p['id'], p['name'], p['price'], p.get('description', ''), 
                 p['category'], images_json, sizes_json, 
@@ -287,24 +302,30 @@ class DBManager:
     def delete_product(self, pid):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
-        cur.execute(f"DELETE FROM products WHERE id={ph}", (pid,))
+        if self.is_pg:
+            cur.execute("DELETE FROM products WHERE id=%s", (pid,))
+        else:
+            cur.execute("DELETE FROM products WHERE id=?", (pid,))
         conn.commit()
         conn.close()
     
     def toggle_stock(self, pid, status):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
-        cur.execute(f"UPDATE products SET is_available={ph} WHERE id={ph}", (int(status), pid))
+        if self.is_pg:
+            cur.execute("UPDATE products SET is_available=%s WHERE id=%s", (int(status), pid))
+        else:
+            cur.execute("UPDATE products SET is_available=? WHERE id=?", (int(status), pid))
         conn.commit()
         conn.close()
 
     def toggle_size_stock(self, pid, size, status):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
-        cur.execute(f"SELECT sizes FROM products WHERE id={ph}", (pid,))
+        if self.is_pg:
+            cur.execute("SELECT sizes FROM products WHERE id=%s", (pid,))
+        else:
+            cur.execute("SELECT sizes FROM products WHERE id=?", (pid,))
         row = cur.fetchone()
         if row:
             current_sizes = row['sizes']
@@ -328,18 +349,20 @@ class DBManager:
                     
             new_json = json.dumps(current_sizes)
             if self.is_pg:
-                cur.execute(f"UPDATE products SET sizes={ph}::jsonb WHERE id={ph}", (new_json, pid))
+                cur.execute("UPDATE products SET sizes=%s::jsonb WHERE id=%s", (new_json, pid))
             else:
-                cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
+                cur.execute("UPDATE products SET sizes=? WHERE id=?", (new_json, pid))
             conn.commit()
         conn.close()
 
     def add_feedback(self, pid, author, text, rating):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
         
-        cur.execute(f"SELECT reviews, ratings FROM products WHERE id={ph}", (pid,))
+        if self.is_pg:
+            cur.execute("SELECT reviews, ratings FROM products WHERE id=%s", (pid,))
+        else:
+            cur.execute("SELECT reviews, ratings FROM products WHERE id=?", (pid,))
         row = cur.fetchone()
         if row:
             reviews = row['reviews']
@@ -363,11 +386,11 @@ class DBManager:
             ratings.append(rating)
             
             if self.is_pg:
-                cur.execute(f"UPDATE products SET reviews={ph}::jsonb, ratings={ph}::jsonb WHERE id={ph}", (
+                cur.execute("UPDATE products SET reviews=%s::jsonb, ratings=%s::jsonb WHERE id=%s", (
                     json.dumps(reviews), json.dumps(ratings), pid
                 ))
             else:
-                cur.execute(f"UPDATE products SET reviews={ph}, ratings={ph} WHERE id={ph}", (
+                cur.execute("UPDATE products SET reviews=?, ratings=? WHERE id=?", (
                     json.dumps(reviews), json.dumps(ratings), pid
                 ))
             conn.commit()
@@ -376,15 +399,14 @@ class DBManager:
     def add_order(self, uid, uname, phone, addr, items, total):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
         items_json = json.dumps(items)
         
         if self.is_pg:
-            cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph}) RETURNING id", 
+            cur.execute("INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id", 
                        (uid, uname, phone, addr, items_json, total))
             oid = cur.fetchone()['id']
         else:
-            cur.execute(f"INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES ({ph},{ph},{ph},{ph},{ph},{ph})", 
+            cur.execute("INSERT INTO orders (user_id, user_name, phone, address, items, total) VALUES (?,?,?,?,?,?)", 
                        (uid, uname, phone, addr, items_json, total))
             oid = cur.lastrowid
             
@@ -395,8 +417,10 @@ class DBManager:
     def list_user_orders(self, uid, limit=5):
         conn = self.get_conn()
         cur = conn.cursor()
-        ph = "%s" if self.is_pg else "?"
-        cur.execute(f"SELECT * FROM orders WHERE user_id={ph} ORDER BY id DESC LIMIT {limit}", (uid,))
+        if self.is_pg:
+            cur.execute("SELECT * FROM orders WHERE user_id=%s ORDER BY id DESC LIMIT %s", (uid, limit))
+        else:
+            cur.execute("SELECT * FROM orders WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit))
         rows = cur.fetchall()
         orders = []
         for r in rows:
@@ -491,6 +515,27 @@ async def api_create_order(request):
     except Exception as e:
         log.error(f"Ошибка сохранения заказа через сайт: {e}")
         return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
+# Эндпоинт проверки прав доступа администратора
+async def api_admin_check(request):
+    try:
+        data = await request.json()
+        user_id = str(data.get('user_id', ''))
+        allowed_admin = str(settings.ADMIN_ID)
+        
+        # Если переменная ADMIN_ID на Render не настроена, временно пропускаем
+        if not allowed_admin:
+            return web.json_response({"is_admin": True})
+            
+        if user_id == allowed_admin:
+            return web.json_response({"is_admin": True})
+            
+        return web.json_response({
+            "is_admin": False, 
+            "msg": "Доступ заблокирован: Панель управления доступна только выбранному ID!"
+        })
+    except Exception as e:
+        return web.json_response({"is_admin": False, "msg": str(e)}, status=400)
 
 async def serve_index(request):
     try:
@@ -626,6 +671,7 @@ async def main():
     app.router.add_post("/api/size", api_toggle_size)
     app.router.add_post("/api/products/feedback", api_save_feedback)
     app.router.add_post("/api/orders", api_create_order)
+    app.router.add_post("/api/admin_check", api_admin_check)
     
     runner = web.AppRunner(app)
     await runner.setup()
