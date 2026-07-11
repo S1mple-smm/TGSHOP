@@ -124,7 +124,7 @@ class DBManager:
                     "category": "Accessories",
                     "description": "Качественный защитный чехол с уникальным ярким дизайном легендарного Супер Марио. Идеально садится на iPad Pro 13 (процессоры M4 и M5). Имеет удобную складывающуюся подставку и отделение под Apple Pencil.",
                     "images": ["https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"Красный": 15, "Синий": 5},
+                    "sizes": {"Красный": {"stock": 15, "price": 345000.0}, "Синий": {"stock": 5, "price": 320000.0}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nСовместимость,iPad Pro 13 M4/M5\nМатериал,Силикон / Микрофибра\nПринт,Супер Марио\nВес,180 г",
                     "reviews": [],
@@ -137,7 +137,7 @@ class DBManager:
                     "category": "Phones",
                     "description": "Флагманский девайс с потрясающим 120Hz LTPO-экраном, новейшим процессором 3-нм класса и улучшенной оптической стабилизацией при съемке 8K видео.",
                     "images": ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"128GB": 20, "256GB": 15, "512GB": 0},
+                    "sizes": {"128GB": {"stock": 20, "price": 12500000.0}, "256GB": {"stock": 15, "price": 13500000.0}, "512GB": {"stock": 0, "price": 14500000.0}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nЭкран,6.7\" OLED 120Hz\nПроцессор,Super M4 Pro\nПамять,512 GB\nКамера,108+48+12 Мп\nБатарея,5000 мАч",
                     "reviews": [],
@@ -150,7 +150,7 @@ class DBManager:
                     "category": "Laptops",
                     "description": "Производительный и тонкий ноутбук в алюминиевом корпусе. Батарея держит до 18 часов воспроизведения видео. Бесшумное охлаждение.",
                     "images": ["https://images.unsplash.com/photo-1496181130204-7552cc1524e2?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"8GB / 256GB": 3, "16GB / 512GB": 10},
+                    "sizes": {"8GB / 256GB": {"stock": 3, "price": 17500000.0}, "16GB / 512GB": {"stock": 10, "price": 18900000.0}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nЭкран,14.2\" Liquid Retina XDR\nПроцессор,M3 Pro Max\nОЗУ,16 GB\nНакопитель,512 GB SSD",
                     "reviews": [],
@@ -163,7 +163,7 @@ class DBManager:
                     "category": "Audio",
                     "description": "Беспроводные полноразмерные наушники с лучшим на рынке гибридным шумоподавлением. Чистый детализированный звук Hi-Res Audio.",
                     "images": ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"],
-                    "sizes": {"Черный Carbon": 12, "Белый Platinum": 0},
+                    "sizes": {"Черный Carbon": {"stock": 12, "price": null}, "Белый Platinum": {"stock": 0, "price": null}},
                     "isAvailable": True,
                     "sizeChart": "Характеристика,Значение\nТип,Полноразмерные\nШумоподавление,Активное (ANC)\nВремя работы,до 30 часов\nВерсия Bluetooth,5.3",
                     "reviews": [],
@@ -179,7 +179,7 @@ class DBManager:
                 
                 cur.execute(f"""
                     INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
-                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph::jsonb if self.is_pg else ph},{ph::jsonb if self.is_pg else ph},{ph},{ph},{ph::jsonb if self.is_pg else ph},{ph::jsonb if self.is_pg else ph})
                 """, (
                     p['id'], p['name'], p['price'], p['description'], 
                     p['category'], images_json, sizes_json, 
@@ -226,7 +226,6 @@ class DBManager:
         images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
-        # Получаем текущие отзывы, чтобы случайно не стереть их при редактировании
         cur.execute(f"SELECT reviews, ratings FROM products WHERE id={ph}", (p['id'],))
         row = cur.fetchone()
         if row:
@@ -239,7 +238,7 @@ class DBManager:
         if self.is_pg:
             sql = f"""
                 INSERT INTO products (id, name, price, description, category, images, sizes, is_available, size_chart, reviews, ratings)
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph}::jsonb,{ph::jsonb},{ph},{ph},{ph}::jsonb,{ph}::jsonb)
                 ON CONFLICT (id) DO UPDATE SET 
                 name=EXCLUDED.name, price=EXCLUDED.price, description=EXCLUDED.description,
                 category=EXCLUDED.category, images=EXCLUDED.images, sizes=EXCLUDED.sizes,
@@ -291,10 +290,25 @@ class DBManager:
             elif hasattr(current_sizes, 'copy'): current_sizes = current_sizes.copy()
             
             if not isinstance(current_sizes, dict): current_sizes = {}
-            current_sizes[size] = status
-            new_json = json.dumps(current_sizes)
             
-            cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
+            # Если статус передан как словарь (содержит stock и цену)
+            if isinstance(status, dict):
+                current_sizes[size] = status
+            else:
+                # Если передан как число (устаревший вариант)
+                if size in current_sizes and isinstance(current_sizes[size], dict):
+                    current_sizes[size]['stock'] = int(status)
+                else:
+                    current_sizes[size] = {
+                        "stock": int(status),
+                        "price": None
+                    }
+                    
+            new_json = json.dumps(current_sizes)
+            if self.is_pg:
+                cur.execute(f"UPDATE products SET sizes={ph}::jsonb WHERE id={ph}", (new_json, pid))
+            else:
+                cur.execute(f"UPDATE products SET sizes={ph} WHERE id={ph}", (new_json, pid))
             conn.commit()
         conn.close()
 
@@ -326,9 +340,14 @@ class DBManager:
             
             ratings.append(rating)
             
-            cur.execute(f"UPDATE products SET reviews={ph}, ratings={ph} WHERE id={ph}", (
-                json.dumps(reviews), json.dumps(ratings), pid
-            ))
+            if self.is_pg:
+                cur.execute(f"UPDATE products SET reviews={ph}::jsonb, ratings={ph}::jsonb WHERE id={ph}", (
+                    json.dumps(reviews), json.dumps(ratings), pid
+                ))
+            else:
+                cur.execute(f"UPDATE products SET reviews={ph}, ratings={ph} WHERE id={ph}", (
+                    json.dumps(reviews), json.dumps(ratings), pid
+                ))
             conn.commit()
         conn.close()
 
