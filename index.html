@@ -53,7 +53,7 @@
             position: fixed;
             bottom: 0; left: 0; right: 0;
             background: white;
-            border-radius: 32px 32px 0 0;
+            border-radius: 28px 28px 0 0;
             height: 90vh;
             transform: translateY(100%);
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -113,11 +113,11 @@
             
             <div class="flex items-center gap-3 justify-end flex-1 max-w-md ml-4">
                 <div class="relative w-full max-w-[200px] sm:max-w-[280px]">
-                    <input type="text" id="searchInput" placeholder="Поиск девайсов..." class="bg-zinc-100/90 border border-transparent rounded-full py-2 pl-4 pr-10 text-xs w-full focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-zinc-800 placeholder-zinc-400">
-                    <i class="fas fa-search absolute right-3.5 top-3 text-zinc-400 text-xs pointer-events-none"></i>
+                    <input type="text" id="searchInput" placeholder="Поиск девайсов..." class="bg-zinc-100/90 border border-transparent rounded-full py-2.5 sm:py-3 pl-4 pr-10 text-xs w-full focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-zinc-800 placeholder-zinc-400">
+                    <i class="fas fa-search absolute right-3.5 top-3.5 sm:top-4 text-zinc-400 text-xs pointer-events-none"></i>
                 </div>
                 
-                <button onclick="toggleCart()" class="relative p-2.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 rounded-full active:scale-90 transition-all border border-zinc-100">
+                <button onclick="toggleCart()" class="relative p-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 rounded-full active:scale-90 transition-all border border-zinc-100 flex items-center justify-center">
                     <i class="fas fa-shopping-bag text-lg"></i>
                     <span id="cartBadge" class="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-black h-5 w-5 flex items-center justify-center rounded-full border-2 border-white opacity-0 transition-opacity">0</span>
                 </button>
@@ -130,7 +130,7 @@
 
     <!-- Диалоговое подтверждение (замена confirm) -->
     <div id="confirmDialog" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-slide-up border border-zinc-100">
+        <div class="bg-white rounded-xl md:rounded-[28px] w-full max-w-sm overflow-hidden shadow-2xl animate-slide-up border border-zinc-100">
             <div class="p-6 text-center">
                 <div class="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -138,8 +138,8 @@
                 <h3 class="font-extrabold text-zinc-900 text-lg mb-2">Вы уверены?</h3>
                 <p id="confirmMessage" class="text-zinc-500 text-sm leading-relaxed mb-6">Это действие нельзя отменить.</p>
                 <div class="flex gap-3">
-                    <button id="confirmCancelBtn" class="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl font-bold text-sm transition-colors">Отмена</button>
-                    <button id="confirmOkBtn" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-200 transition-all">Удалить</button>
+                    <button id="confirmCancelBtn" class="flex-1 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg md:rounded-xl font-bold text-sm transition-colors">Отмена</button>
+                    <button id="confirmOkBtn" class="flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-lg md:rounded-xl font-bold text-sm shadow-lg shadow-red-200 transition-all">Удалить</button>
                 </div>
             </div>
         </div>
@@ -148,21 +148,21 @@
     <!-- Главная страница (Каталог) -->
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         
-        <!-- Категории товаров -->
+        <!-- Категории товаров (Улучшенные тач-зоны и размеры для пальцев) -->
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-4 px-4 sticky top-[68px] z-30 bg-slate-50/90 backdrop-blur-md py-3 border-b border-zinc-100/50">
-            <button onclick="filter('All')" class="cat-btn bg-zinc-950 text-white px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
-            <button onclick="filter('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
-            <button onclick="filter('Laptops')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all">Ноутбуки</button>
-            <button onclick="filter('Audio')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all">Наушники</button>
-            <button onclick="filter('Accessories')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all">Аксессуары</button>
+            <button onclick="filter('All')" class="cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
+            <button onclick="filter('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
+            <button onclick="filter('Laptops')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Ноутбуки</button>
+            <button onclick="filter('Audio')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Наушники</button>
+            <button onclick="filter('Accessories')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Аксессуары</button>
         </div>
 
         <!-- Премиальный Баннер техники -->
-        <div class="mb-8 rounded-3xl bg-gradient-to-br from-blue-900 to-zinc-950 text-white p-6 sm:p-8 relative overflow-hidden shadow-xl shadow-blue-950/10">
+        <div class="mb-8 rounded-xl md:rounded-[36px] bg-gradient-to-br from-blue-900 to-zinc-950 text-white p-6 sm:p-8 relative overflow-hidden shadow-xl shadow-blue-950/10">
             <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-blue-500 rounded-full blur-[80px] opacity-40"></div>
             <div class="absolute right-10 top-2 w-32 h-32 bg-cyan-400 rounded-full blur-[70px] opacity-20"></div>
             <div class="relative z-10 max-w-md">
-                <span class="bg-blue-600 text-white text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md">PREMIUM TECH</span>
+                <span class="bg-blue-600 text-white text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md md:rounded-lg">PREMIUM TECH</span>
                 <h2 class="text-2xl sm:text-3xl font-black mt-3 mb-2 leading-tight tracking-tight">Новое поколение персональной электроники</h2>
                 <p class="text-zinc-300 text-xs leading-relaxed mb-4">Оригинальные девайсы, быстрая доставка, официальная гарантия и лучшая поддержка в Telegram.</p>
             </div>
@@ -182,7 +182,7 @@
     <div id="modalBackdrop" class="fixed inset-0 bg-zinc-950/70 backdrop-blur-sm z-50 hidden transition-opacity duration-300" onclick="closeProduct()"></div>
 
     <!-- СТРАНИЦА ПРОДУКТА (Adaptive) -->
-    <div id="productView" class="product-view shadow-[0_-15px_40px_rgba(9,9,11,0.15)] md:shadow-none border-t border-zinc-100 md:border-t-0">
+    <div id="productView" class="product-view shadow-[0_-15px_40px_rgba(9,9,11,0.15)] md:shadow-none border-t border-zinc-100 md:border-t-0 rounded-t-[28px] md:rounded-none">
         
         <!-- Ползунок закрытия для мобильных -->
         <div class="md:hidden w-full flex justify-center pt-3 pb-2 cursor-pointer" onclick="closeProduct()">
@@ -202,14 +202,14 @@
         <div class="flex-1 overflow-y-auto md:overflow-visible pb-28 md:pb-16 bg-white">
             <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12 relative">
                 
-                <!-- Адаптивная круглая кнопка закрытия «X» (меняет размер и стиль в зависимости от экрана) -->
-                <button onclick="closeProduct()" class="absolute top-4 right-4 md:top-0 md:right-0 z-50 bg-white/90 backdrop-blur border border-zinc-200/50 md:border-transparent md:bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center shadow-md md:shadow-none active:scale-90 transition-all cursor-pointer">
+                <!-- Адаптивная круглая кнопка закрытия «X» (комфортный размер для пальцев на мобилке и десктопе) -->
+                <button onclick="closeProduct()" class="absolute top-4 right-4 md:top-0 md:right-0 z-50 bg-white/90 backdrop-blur border border-zinc-200/50 md:border-transparent md:bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950 rounded-full w-11 h-11 md:w-12 md:h-12 flex items-center justify-center shadow-md md:shadow-none active:scale-90 transition-all cursor-pointer">
                     <i class="fas fa-times text-sm md:text-base"></i>
                 </button>
 
                 <!-- ЛЕВАЯ ЧАСТЬ: Фотографии -->
                 <div class="w-full relative px-4 md:px-0">
-                    <div class="swiper mySwiper w-full h-[40vh] md:h-[480px] bg-zinc-50 rounded-3xl border border-zinc-100/80 overflow-hidden">
+                    <div class="swiper mySwiper w-full h-[40vh] md:h-[480px] bg-zinc-50 rounded-2xl md:rounded-[32px] border border-zinc-100/80 overflow-hidden">
                         <div class="swiper-wrapper" id="modalSwiperWrapper"></div>
                         <div class="swiper-pagination"></div>
                     </div>
@@ -227,10 +227,10 @@
                     </div>
 
                     <!-- Название -->
-                    <h1 id="mName" class="text-2xl md:text-3xl font-black text-zinc-950 leading-tight mb-2 tracking-tight"></h1>
+                    <h1 id="mName" class="text-2xl md:text-3xl font-black text-zinc-950 mb-2 tracking-tight"></h1>
                     
                     <!-- Блок Рейтинга -->
-                    <div class="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 mb-4 text-xs space-y-2">
+                    <div class="bg-zinc-50 rounded-xl md:rounded-3xl p-4 border border-zinc-100 mb-4 text-xs space-y-2">
                         <div class="flex items-center gap-2">
                             <span class="font-extrabold text-zinc-950 text-base" id="mRatingVal">0.0</span>
                             <div class="text-amber-400 flex gap-0.5 text-sm" id="mRatingStars">
@@ -242,9 +242,9 @@
                             Базовая цена - <span class="font-bold text-zinc-900" id="mPriceRaw">0.00</span>
                         </div>
 
-                        <!-- Единая Кнопка Написания отзыва и Оценки -->
+                        <!-- Единая Кнопка Написания отзыва и Оценки (увеличена высота для пальцев) -->
                         <div class="pt-2">
-                            <button onclick="openFeedbackModal()" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-lg shadow-blue-100 active:scale-95 transition-all text-center flex items-center justify-center gap-2">
+                            <button onclick="openFeedbackModal()" class="w-full py-3.5 md:py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg md:rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer">
                                 <i class="fas fa-pen-fancy"></i>
                                 <span>Оставить отзыв и оценку</span>
                             </button>
@@ -252,7 +252,7 @@
                     </div>
 
                     <!-- Цена крупно (Автоматически меняется при выборе опции) -->
-                    <div id="mPrice" class="text-2xl md:text-3xl font-black text-blue-600 mb-6 bg-blue-50/50 px-4 py-2 rounded-2xl w-max"></div>
+                    <div id="mPrice" class="text-2xl md:text-3xl font-black text-blue-600 mb-6 bg-blue-50/50 px-4 py-2 rounded-xl md:rounded-2xl w-max"></div>
 
                     <!-- Выбор конфигурации -->
                     <div class="mb-6">
@@ -263,14 +263,14 @@
                         <div id="mSizes" class="flex flex-wrap gap-2.5 mb-2"></div>
                     </div>
 
-                    <!-- Действия -->
+                    <!-- Действия (высокие комфортные кнопки на десктопе и мобилках) -->
                     <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] md:shadow-none">
-                        <div class="flex items-center border border-zinc-200 rounded-2xl h-14 bg-zinc-50 shrink-0">
-                            <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-lg font-bold text-zinc-500 hover:text-zinc-950 active:bg-zinc-200 rounded-l-2xl transition-all">-</button>
+                        <div class="flex items-center border border-zinc-200 rounded-xl md:rounded-2xl h-14 bg-zinc-50 shrink-0">
+                            <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-lg font-bold text-zinc-500 hover:text-zinc-950 active:bg-zinc-200 rounded-l-xl md:rounded-l-2xl transition-all">-</button>
                             <span id="mQty" class="w-8 text-center font-extrabold text-zinc-900 text-base">1</span>
-                            <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center text-lg font-bold text-zinc-500 hover:text-zinc-950 active:bg-zinc-200 rounded-r-2xl transition-all">+</button>
+                            <button onclick="updateQty(1)" class="w-12 h-full flex items-center justify-center text-lg font-bold text-zinc-500 hover:text-zinc-950 active:bg-zinc-200 rounded-r-xl md:rounded-r-2xl transition-all">+</button>
                         </div>
-                        <button onclick="addToCart()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-950/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <button onclick="addToCart()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-xl md:rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-950/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fas fa-shopping-cart text-xs"></i>
                             <span>В корзину</span>
                         </button>
@@ -282,8 +282,8 @@
                         <p id="mDesc" class="text-zinc-500 text-sm leading-relaxed"></p>
                     </div>
 
-                    <!-- Таблица характеристик -->
-                    <div class="mt-4 bg-zinc-50 rounded-2xl border border-zinc-100 overflow-hidden">
+                    <!-- Таблица характеристик (скругление зависит от экрана) -->
+                    <div class="mt-4 bg-zinc-50 rounded-xl md:rounded-2xl border border-zinc-100 overflow-hidden">
                         <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-4 text-xs font-black text-zinc-800 uppercase tracking-wider active:bg-zinc-100 transition-colors">
                             <span class="flex items-center gap-2"><i class="fas fa-microchip text-blue-600"></i> Характеристики устройства</span>
                             <i class="fas fa-chevron-down transition-transform duration-300 text-zinc-400 text-[10px]" id="sizeChartArrow"></i>
@@ -306,26 +306,27 @@
 
     <!-- ЕДИНАЯ МОДАЛКА ОТЗЫВА И ОЦЕНКИ -->
     <div id="feedbackModal" class="fixed inset-0 bg-zinc-950/70 z-[105] hidden backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this) closeFeedbackModal()">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-sm p-6 shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
             <h3 class="font-black text-zinc-950 text-center text-base mb-1">Оставить отзыв и оценку</h3>
             <p class="text-zinc-400 text-[10px] text-center uppercase tracking-wider font-extrabold mb-4">Поделитесь своим впечатлением</p>
             
-            <div class="flex justify-center gap-2.5 mb-5 text-2xl text-zinc-300" id="feedbackStarSelector">
-                <button onclick="setFeedbackStars(1)" class="hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
-                <button onclick="setFeedbackStars(2)" class="hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
-                <button onclick="setFeedbackStars(3)" class="hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
-                <button onclick="setFeedbackStars(4)" class="hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
-                <button onclick="setFeedbackStars(5)" class="hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
+            <!-- Тач-зоны звёздочек увеличены с помощью пэддингов p-2.5 -->
+            <div class="flex justify-center gap-1.5 mb-5 text-2xl text-zinc-300" id="feedbackStarSelector">
+                <button onclick="setFeedbackStars(1)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
+                <button onclick="setFeedbackStars(2)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
+                <button onclick="setFeedbackStars(3)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
+                <button onclick="setFeedbackStars(4)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
+                <button onclick="setFeedbackStars(5)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
             </div>
 
-            <div class="space-y-3 mb-5">
-                <input type="text" id="feedbackAuthor" placeholder="Ваше имя" class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
-                <textarea id="feedbackText" placeholder="Напишите ваше мнение о товаре..." class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm h-24 outline-none resize-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
+            <div class="space-y-3 mb-5" id="feedbackInputWrapper">
+                <input type="text" id="feedbackAuthor" placeholder="Ваше имя" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
+                <textarea id="feedbackText" placeholder="Напишите ваше мнение о товаре..." class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm h-24 outline-none resize-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
             </div>
             
             <div class="flex gap-2">
-                <button onclick="closeFeedbackModal()" class="flex-1 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold transition-colors">Отмена</button>
-                <button onclick="submitFeedback()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-100 hover:bg-blue-700">Отправить</button>
+                <button onclick="closeFeedbackModal()" class="flex-1 py-3.5 bg-zinc-100 text-zinc-700 rounded-lg md:rounded-xl text-xs font-bold transition-colors">Отмена</button>
+                <button onclick="submitFeedback()" class="flex-1 py-3.5 bg-blue-600 text-white rounded-lg md:rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-100 hover:bg-blue-700">Отправить</button>
             </div>
         </div>
     </div>
@@ -336,30 +337,30 @@
             <h3 class="font-extrabold text-zinc-950 text-base mb-1 text-center">Изменить остаток</h3>
             <p id="stockModalTitle" class="text-zinc-400 text-[10px] text-center mb-4 uppercase tracking-widest font-bold"></p>
             <div class="mb-5">
-                <input type="number" id="stockModalInput" min="0" class="w-full border-zinc-200 border p-3.5 rounded-xl text-center text-lg font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all bg-zinc-50">
+                <input type="number" id="stockModalInput" min="0" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-center text-lg font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all bg-zinc-50">
             </div>
             <div class="flex gap-2">
-                <button onclick="closeStockModal()" class="flex-1 py-2.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold">Отмена</button>
-                <button onclick="submitStockUpdate()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold">Сохранить</button>
+                <button onclick="closeStockModal()" class="flex-1 py-3 bg-zinc-100 text-zinc-700 rounded-lg md:rounded-xl text-xs font-bold">Отмена</button>
+                <button onclick="submitStockUpdate()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg md:rounded-xl text-xs font-bold">Сохранить</button>
             </div>
         </div>
     </div>
 
     <!-- КОРЗИНА -->
     <div id="cartOverlay" class="fixed inset-0 bg-zinc-950/70 z-[60] hidden backdrop-blur-sm transition-opacity duration-300" onclick="toggleCart()"></div>
-    <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-zinc-100">
-        <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+    <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-zinc-100 md:rounded-l-[32px]">
+        <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 md:rounded-tl-[32px]">
             <h2 class="text-base font-black uppercase tracking-wider text-zinc-950">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1 font-black"></span></h2>
             <button onclick="toggleCart()" class="p-2.5 bg-white text-zinc-500 hover:text-zinc-950 rounded-full shadow-sm border border-zinc-200/60 active:scale-95 transition-all"><i class="fas fa-times text-sm"></i></button>
         </div>
         <div id="cartItems" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
         
-        <div class="p-5 border-t border-zinc-100 bg-white pb-10 safe-area-pb">
+        <div class="p-5 border-t border-zinc-100 bg-white pb-10 safe-area-pb md:rounded-bl-[32px]">
             <div class="flex justify-between items-center mb-5">
                 <span class="text-zinc-400 font-bold text-xs uppercase tracking-wider">Итоговая сумма</span>
                 <span id="cartTotal" class="text-2xl font-black text-zinc-950 bg-blue-50 px-4 py-1.5 rounded-xl border border-blue-100">0 сум</span>
             </div>
-            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2">
+            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fas fa-lock text-xs"></i>
                 <span>Оформить заказ</span>
             </button>
@@ -368,29 +369,29 @@
 
     <!-- МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ ЗАКАЗА -->
     <div id="checkoutModal" class="fixed inset-0 bg-zinc-950/75 z-[80] hidden backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this) toggleCheckoutModal()">
-        <div class="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
             <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
                 <h3 class="font-black text-zinc-950 uppercase tracking-wider text-sm">Оформление доставки</h3>
-                <button onclick="toggleCheckoutModal()" class="p-2 bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100">
+                <button onclick="toggleCheckoutModal()" class="p-2.5 bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100">
                     <i class="fas fa-times text-zinc-500"></i>
                 </button>
             </div>
             <form id="checkoutForm" class="p-5 space-y-4" onsubmit="submitOrder(event)">
                 <div>
                     <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Ваше Имя</label>
-                    <input type="text" id="orderName" required placeholder="Имя Фамилия" class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
+                    <input type="text" id="orderName" required placeholder="Имя Фамилия" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Номер телефона</label>
-                    <input type="tel" id="orderPhone" required placeholder="+998 (__) ___-__-__" class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
+                    <input type="tel" id="orderPhone" required placeholder="+998 (__) ___-__-__" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Адрес доставки</label>
-                    <textarea id="orderAddress" required placeholder="Город, район, улица, дом..." class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm h-24 outline-none resize-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
+                    <textarea id="orderAddress" required placeholder="Город, район, улица, дом..." class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm h-24 outline-none resize-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
                 </div>
                 
                 <div class="pt-2">
-                    <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700">
+                    <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 cursor-pointer">
                         Подтвердить заказ
                     </button>
                 </div>
@@ -400,7 +401,7 @@
 
     <!-- МОДАЛЬНОЕ ОКНО УСПЕШНОГО ОФОРМЛЕНИЯ -->
     <div id="successModal" class="fixed inset-0 bg-zinc-950/80 z-[90] hidden backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl border border-zinc-100 animate-slide-up">
+        <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-sm p-6 text-center shadow-2xl border border-zinc-100 animate-slide-up">
             <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner animate-pulse">
                 <i class="fas fa-check-circle animate-bounce"></i>
             </div>
@@ -408,7 +409,7 @@
             <p class="text-zinc-500 text-xs mb-6 leading-relaxed">
                 Ваш заказ <b class="text-blue-600" id="successOrderId"></b> успешно оформлен. Менеджер свяжется с вами в течение нескольких минут!
             </p>
-            <button onclick="closeSuccessModal()" class="w-full bg-zinc-950 text-white py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider shadow-md active:scale-95 transition-all hover:bg-zinc-800">
+            <button onclick="closeSuccessModal()" class="w-full bg-zinc-950 text-white py-3.5 rounded-lg md:rounded-xl font-bold uppercase text-xs tracking-wider shadow-md active:scale-95 transition-all hover:bg-zinc-800 cursor-pointer">
                 Отлично, жду
             </button>
         </div>
@@ -416,25 +417,25 @@
 
     <!-- АДМИН ПАНЕЛЬ -->
     <div id="adminModal" class="fixed inset-0 z-[100] bg-slate-50 hidden overflow-y-auto p-4 md:p-8">
-        <div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden pb-12 border border-zinc-100">
+        <div class="max-w-6xl mx-auto bg-white rounded-2xl md:rounded-[36px] shadow-2xl overflow-hidden pb-12 border border-zinc-100">
             <!-- Header -->
             <div class="p-5 border-b border-zinc-200 flex justify-between items-center bg-zinc-950 text-white sticky top-0 z-10">
                 <h2 class="font-black text-sm uppercase tracking-widest flex items-center gap-2"><i class="fas fa-sliders-h text-blue-400"></i> ПАНЕЛЬ УПРАВЛЕНИЯ WEISI TECH</h2>
-                <button onclick="closeAdmin()" class="text-xs font-bold bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-lg transition-colors border border-zinc-700/50">Закрыть</button>
+                <button onclick="closeAdmin()" class="text-xs font-bold bg-zinc-800 hover:bg-zinc-700 px-4 py-2.5 rounded-lg border border-zinc-700/50 cursor-pointer">Закрыть</button>
             </div>
             
             <div class="p-6 space-y-8 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
                 <!-- Form Container -->
                 <form id="addForm" class="space-y-4">
-                    <div class="bg-blue-50/50 p-6 rounded-2xl border border-blue-100/50 shadow-sm transition-all" id="formWrapper">
+                    <div class="bg-blue-50/50 p-6 rounded-xl md:rounded-3xl border border-blue-100/50 shadow-sm transition-all" id="formWrapper">
                         <h3 id="formTitle" class="font-black text-blue-900 mb-4 text-xs uppercase tracking-wider flex items-center gap-1.5"><i class="fas fa-plus"></i> Новый товар</h3>
                         
                         <div class="space-y-4">
-                            <input type="text" id="aName" placeholder="Название девайса" required class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm outline-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
+                            <input type="text" id="aName" placeholder="Название девайса" required class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
                             
                             <div class="grid grid-cols-2 gap-4">
-                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm outline-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
-                                <select id="aCat" class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm bg-white outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all text-zinc-600 font-medium">
+                                <input type="number" id="aPrice" placeholder="Цена (сум)" required class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all">
+                                <select id="aCat" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm bg-white outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all text-zinc-600 font-medium">
                                     <option value="" disabled selected>Категория</option>
                                     <option value="Phones">Смартфоны</option>
                                     <option value="Laptops">Ноутбуки</option>
@@ -443,11 +444,11 @@
                                 </select>
                             </div>
 
-                            <textarea id="aDesc" placeholder="Характеристики товара и подробности..." class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm h-24 outline-none resize-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
+                            <textarea id="aDesc" placeholder="Характеристики товара и подробности..." class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm h-24 outline-none resize-none bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"></textarea>
 
                             <div>
                                 <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Фотографии (Макс 10)</label>
-                                <div class="border-2 border-dashed border-blue-200 rounded-2xl p-5 text-center bg-white cursor-pointer hover:bg-blue-50/30 transition-colors relative">
+                                <div class="border-2 border-dashed border-blue-200 rounded-xl md:rounded-2xl p-5 text-center bg-white cursor-pointer hover:bg-blue-50/30 transition-colors relative">
                                     <input type="file" id="aPhotos" multiple accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
                                     <div class="text-blue-500 text-xs font-bold pointer-events-none flex flex-col items-center gap-1.5">
                                         <i class="fas fa-cloud-upload-alt text-2xl"></i> 
@@ -458,10 +459,10 @@
                             </div>
 
                             <!-- РУЧНОЙ ДИНАМИЧЕСКИЙ РЕДАКТОР ОПЦИЙ И СКЛАДА С ИНДИВИДУАЛЬНОЙ ЦЕНОЙ -->
-                            <div class="bg-white p-4 rounded-2xl border border-zinc-200/80 mb-4 shadow-sm">
+                            <div class="bg-white p-4 rounded-xl md:rounded-2xl border border-zinc-200/80 mb-4 shadow-sm">
                                 <div class="flex justify-between items-center mb-3">
                                     <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">Опции комплектации и склад</label>
-                                    <button type="button" onclick="addOptionRow('', 10, '')" class="text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors">
+                                    <button type="button" onclick="addOptionRow('', 10, '')" class="text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer">
                                         <i class="fas fa-plus-circle text-blue-500"></i> Добавить опцию
                                     </button>
                                 </div>
@@ -476,8 +477,8 @@
                         </div>
 
                         <div class="flex gap-3 mt-6">
-                            <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-100 active:scale-95 transition-transform hover:bg-blue-700">СОХРАНИТЬ В БАЗУ</button>
-                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-zinc-400 text-white px-5 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform hover:bg-zinc-500">ОТМЕНА</button>
+                            <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 text-white py-3.5 rounded-lg md:rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-100 active:scale-95 transition-transform hover:bg-blue-700 cursor-pointer">СОХРАНИТЬ В БАЗУ</button>
+                            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-zinc-400 text-white px-5 py-3.5 rounded-lg md:rounded-xl font-bold text-xs uppercase tracking-wider shadow-md active:scale-95 transition-transform hover:bg-zinc-500 cursor-pointer">ОТМЕНА</button>
                         </div>
                     </div>
                 </form>
@@ -495,7 +496,6 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <script>
-        // Инициализация Telegram WebApp
         let tg = null;
         let isTelegram = false;
         try {
@@ -566,12 +566,12 @@
             
             const div = document.createElement('div');
             div.id = rowId;
-            div.className = "flex gap-2 items-center animate-slide-up bg-zinc-50 p-2 rounded-xl border border-zinc-100";
+            div.className = "flex gap-2 items-center animate-slide-up bg-zinc-50 p-2 rounded-lg md:rounded-xl border border-zinc-100";
             
             div.innerHTML = `
-                <input type="text" placeholder="Опция (напр: 128GB, Черный)" value="${name}" required class="opt-name flex-1 border-zinc-200 border px-3 py-2 rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
-                <input type="number" min="0" placeholder="Склад" value="${stock}" required class="opt-stock w-16 border-zinc-200 border px-3 py-2 rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
-                <input type="number" min="0" placeholder="Цена (опц.)" value="${price}" class="opt-price w-24 border-zinc-200 border px-3 py-2 rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
+                <input type="text" placeholder="Опция (напр: 128GB, Черный)" value="${name}" required class="opt-name flex-1 border-zinc-200 border px-3 py-2.5 rounded-md md:rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
+                <input type="number" min="0" placeholder="Склад" value="${stock}" required class="opt-stock w-16 border-zinc-200 border px-3 py-2.5 rounded-md md:rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
+                <input type="number" min="0" placeholder="Цена (опц.)" value="${price}" class="opt-price w-24 border-zinc-200 border px-3 py-2.5 rounded-md md:rounded-lg text-xs outline-none focus:border-blue-500 bg-white">
                 <button type="button" onclick="removeOptionRow('${rowId}')" class="text-rose-500 hover:text-rose-600 p-2 text-xs transition-colors"><i class="fas fa-trash-alt"></i></button>
             `;
             container.appendChild(div);
@@ -879,8 +879,8 @@
                 const starsHtml = getStarsHtml(ratingObj.rating);
                 
                 return `
-                    <div class="bg-white rounded-[24px] overflow-hidden border border-zinc-100 shadow-[0_4px_15px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" onclick="openProduct('${p.id}')">
-                        <div class="aspect-[1/1] relative bg-zinc-50 overflow-hidden shrink-0">
+                    <div class="bg-white rounded-xl md:rounded-[32px] overflow-hidden border border-zinc-100 shadow-[0_4px_15px_-4px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer" onclick="openProduct('${p.id}')">
+                        <div class="aspect-[1/1] relative bg-zinc-50 overflow-hidden shrink-0 rounded-t-xl md:rounded-t-[32px]">
                             <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/400x400/f4f4f5/0066FF?text=No+Photo'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             ${!p.isAvailable ? '<div class="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center"><span class="bg-zinc-950 text-white text-[9px] font-black tracking-widest uppercase px-3 py-1.5 rounded-full shadow-md">Нет в наличии</span></div>' : ''}
                         </div>
@@ -896,7 +896,7 @@
                             </div>
                             <div class="flex justify-between items-center mt-2 border-t border-zinc-100 pt-3">
                                 <span class="text-zinc-950 font-black text-xs sm:text-sm">${formatMoney(p.price)}</span>
-                                <span class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[10px]"><i class="fas fa-chevron-right"></i></span>
+                                <span class="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[11px]"><i class="fas fa-chevron-right"></i></span>
                             </div>
                         </div>
                     </div>
@@ -986,7 +986,7 @@
                 pagination: { el: ".swiper-pagination", clickable: true } 
             });
 
-            // Рендер ручных опций и остатка товара на складе
+            // Рендер ручных опций и остатка товара на складе (удобные тач-кнопки py-3 px-5)
             const sizesContainer = document.getElementById('mSizes');
             const sortedSizes = sortSizes(Object.keys(currentProduct.sizes || {}));
             
@@ -1006,7 +1006,7 @@
                     const isAvail = stock > 0 && currentProduct.isAvailable;
                     
                     return `
-                        <button onclick="selectSize('${s}')" class="size-btn border rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all hover:border-zinc-950 ${!isAvail ? 'opacity-20 cursor-not-allowed bg-zinc-50 border-zinc-200 line-through' : 'bg-white text-zinc-900 border-zinc-200'}" ${!isAvail ? 'disabled' : ''} data-size="${s}">
+                        <button onclick="selectSize('${s}')" class="size-btn border rounded-xl md:rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all hover:border-zinc-950 cursor-pointer ${!isAvail ? 'opacity-20 cursor-not-allowed bg-zinc-50 border-zinc-200 line-through' : 'bg-white text-zinc-900 border-zinc-200'}" ${!isAvail ? 'disabled' : ''} data-size="${s}">
                             <span class="font-bold text-zinc-900">${s}</span>
                             ${optPrice ? `<span class="text-[9px] text-blue-600 mt-0.5 font-bold">${formatMoney(optPrice)}</span>` : ''}
                             ${!isAvail ? '<span class="text-[9px] text-red-500 mt-0.5 font-semibold">Нет на складе</span>' : ''}
@@ -1045,7 +1045,9 @@
 
         function closeFeedbackModal() {
             document.getElementById('feedbackModal').classList.add('hidden');
-            document.getElementById('feedbackAuthor').value = '';
+            if (!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user)) {
+                document.getElementById('feedbackAuthor').value = '';
+            }
             document.getElementById('feedbackText').value = '';
         }
 
@@ -1109,13 +1111,13 @@
             const container = document.getElementById('productReviewsList');
             const reviews = (currentProduct && currentProduct.reviews) ? currentProduct.reviews : [];
             if (reviews.length === 0) {
-                container.innerHTML = `<div class="text-xs text-zinc-400 italic">Покупатели пока не оставили отзывов. Будьте первыми!</div>`;
+                container.innerHTML = `<div class="text-xs text-zinc-400 italic">Покупатели пока не оставили отзывов</div>`;
                 return;
             }
             container.innerHTML = reviews.map(r => {
                 const reviewStars = r.rating ? getStarsHtml(r.rating) : '';
                 return `
-                    <div class="bg-zinc-50 p-4 rounded-xl border border-zinc-100/80 text-xs animate-slide-up">
+                    <div class="bg-zinc-50 p-4 rounded-xl md:rounded-2xl border border-zinc-100/80 text-xs animate-slide-up">
                         <div class="flex justify-between items-center mb-1">
                             <span class="font-extrabold text-zinc-800">${r.author}</span>
                             <div class="flex items-center gap-1.5">
@@ -1134,9 +1136,9 @@
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
                 if(b.disabled) return;
-                b.className = 'size-btn border border-zinc-200 bg-white text-zinc-900 rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all hover:border-zinc-950';
+                b.className = 'size-btn border border-zinc-200 bg-white text-zinc-900 rounded-xl md:rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all hover:border-zinc-950 cursor-pointer';
                 if(b.dataset.size === size) {
-                    b.className = 'size-btn border-2 border-blue-600 bg-blue-50/50 text-blue-700 font-extrabold rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all ring-4 ring-blue-50';
+                    b.className = 'size-btn border-2 border-blue-600 bg-blue-50/50 text-blue-700 font-extrabold rounded-xl md:rounded-2xl px-5 py-3 flex flex-col items-center justify-center text-xs transition-all ring-4 ring-blue-50 cursor-pointer';
                 }
             });
             const sizeHelper = document.getElementById('sizeHelper');
@@ -1451,9 +1453,9 @@
         function renderAdminList() {
             const list = document.getElementById('adminList');
             list.innerHTML = products.map(p => `
-                <div class="bg-white border border-zinc-200/80 p-4 rounded-2xl mb-4 shadow-sm hover:shadow transition-shadow">
+                <div class="bg-white border border-zinc-200/80 p-4 rounded-xl md:rounded-[24px] mb-4 shadow-sm hover:shadow transition-shadow">
                     <div class="flex gap-4">
-                        <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=No'}" class="w-20 h-20 object-cover rounded-xl bg-white border border-zinc-200/60 shrink-0">
+                        <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=No'}" class="w-20 h-20 object-cover rounded-lg md:rounded-xl bg-white border border-zinc-200/60 shrink-0">
                         <div class="flex-1 min-w-0 pr-1 flex flex-col justify-between">
                             <div>
                                 <div class="font-extrabold text-sm text-zinc-950 truncate mb-1" title="${p.name}">${p.name}</div>
@@ -1462,9 +1464,9 @@
                             </div>
                             
                             <div class="flex gap-2 mt-3">
-                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'НА ВИ ТРИНЕ' : 'ПРОДАН'}</button>
-                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
+                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'НА ВИ ТРИНЕ' : 'ПРОДАН'}</button>
+                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1485,7 +1487,7 @@
                                         stock = (typeof rawStock === 'boolean') ? (rawStock ? 10 : 0) : (parseInt(rawStock) || 0);
                                     }
                                     return `
-                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
+                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
                                             ${s} (${stock} шт.${optPriceText})
                                         </button>
                                     `;
@@ -1534,9 +1536,9 @@
         
         function filter(cat) { 
             document.querySelectorAll('.cat-btn').forEach(b => {
-                b.className = 'cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap active:scale-95 transition-all';
+                b.className = 'cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all';
                 if(b.innerText.includes(cat === 'All' ? 'Все' : (cat==='Phones'?'Смартфоны':(cat==='Laptops'?'Ноутбуки':(cat==='Audio'?'Наушники':(cat==='Accessories'?'Аксессуары':'')))))) {
-                    b.className = 'cat-btn bg-zinc-950 text-white px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all';
+                    b.className = 'cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all';
                 }
             });
             renderGrid(cat === 'All' ? products : products.filter(p => p.category === cat));
@@ -1583,6 +1585,7 @@
                 }
             }
 
+            // Автозаполнение и строгая блокировка аутентичного TG-профиля при написании отзывов
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 const user = tg.initDataUnsafe.user;
                 const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
@@ -1590,23 +1593,30 @@
                     const orderNameInput = document.getElementById('orderName');
                     if (orderNameInput) orderNameInput.value = fullName;
                 }
-            }
 
-            // Настройка поиска и входа по коду 4443
-            const searchInput = document.getElementById('searchInput');
-            const handleSearchOrAdmin = (e) => {
-                const val = e.target.value.trim();
-                if(val === SECRET_CODE) { 
-                    openAdminPanel(); 
-                    e.target.value = ''; 
-                    e.target.blur(); 
-                    showToast("Панель администратора открыта!", "success");
-                } else { 
-                    renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
+                // Строим подтвержденный Telegram никнейм автора
+                let tgVerifiedName = fullName || 'Telegram пользователь';
+                if (user.username) {
+                    tgVerifiedName += ` (@${user.username})`;
                 }
-            };
-            searchInput.addEventListener('input', handleSearchOrAdmin);
-            searchInput.addEventListener('keyup', handleSearchOrAdmin);
+
+                // Подставляем и намертво блокируем поле ввода автора, делая его безопасным от накруток
+                const feedbackAuthorInput = document.getElementById('feedbackAuthor');
+                if (feedbackAuthorInput) {
+                    feedbackAuthorInput.value = tgVerifiedName;
+                    feedbackAuthorInput.readOnly = true;
+                    feedbackAuthorInput.classList.add('bg-zinc-100', 'text-zinc-500', 'cursor-not-allowed', 'border-emerald-200');
+                    
+                    // Показываем красивый значок верификации ТГ в модалке
+                    const wrapper = document.getElementById('feedbackInputWrapper');
+                    if (wrapper) {
+                        const verifiedBadge = document.createElement('div');
+                        verifiedBadge.className = "text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1 pl-1";
+                        verifiedBadge.innerHTML = "<i class='fas fa-check-circle'></i> Telegram профиль подтвержден";
+                        wrapper.insertBefore(verifiedBadge, feedbackAuthorInput.nextSibling);
+                    }
+                }
+            }
 
             populateOptionsForm(null);
             loadProducts();
