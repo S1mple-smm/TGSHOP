@@ -713,7 +713,14 @@
                         showToast('Устройство добавлено на витрину!', 'success');
                     }
                 } else {
-                    showToast('Ошибка на сервере при сохранении', 'error');
+                    let errorDetails = "Ошибка на сервере при сохранении";
+                    try {
+                        const errorData = await response.json();
+                        if (errorData && errorData.msg) {
+                            errorDetails += `: ${errorData.msg}`;
+                        }
+                    } catch (e) {}
+                    showToast(errorDetails, 'error');
                 }
             } catch (e) { 
                 showToast('Ошибка при добавлении товара', 'error'); 
