@@ -359,7 +359,7 @@ class DBManager:
             if self.is_pg:
                 cur.execute("UPDATE products SET sizes=%s::jsonb WHERE id=%s", (new_json, pid))
             else:
-                cur.execute("UPDATE products SET sizes=? WHERE id=?", (new_json, pid))
+                cur.execute("UPDATE products SET sizes=? WHERE id=%s", (new_json, pid))
             conn.commit()
         conn.close()
 
