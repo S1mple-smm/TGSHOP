@@ -148,7 +148,7 @@
     <!-- Главная страница (Каталог) -->
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         
-        <!-- Категории товаров (Улучшенные тач-зоны и размеры для пальцев) -->
+        <!-- Категории товаров -->
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-4 px-4 sticky top-[68px] z-30 bg-slate-50/90 backdrop-blur-md py-3 border-b border-zinc-100/50">
             <button onclick="filter('All')" class="cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
             <button onclick="filter('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
@@ -181,7 +181,7 @@
     <!-- Затенение для мобилок -->
     <div id="modalBackdrop" class="fixed inset-0 bg-zinc-950/70 backdrop-blur-sm z-50 hidden transition-opacity duration-300" onclick="closeProduct()"></div>
 
-    <!-- СТРАНИЦА ПРОДУКТА (Adaptive) -->
+    <!-- СТРАНИЦА ПРОДУКТА -->
     <div id="productView" class="product-view shadow-[0_-15px_40px_rgba(9,9,11,0.15)] md:shadow-none border-t border-zinc-100 md:border-t-0 rounded-t-[28px] md:rounded-none">
         
         <!-- Ползунок закрытия для мобильных -->
@@ -202,7 +202,7 @@
         <div class="flex-1 overflow-y-auto md:overflow-visible pb-28 md:pb-16 bg-white">
             <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12 relative">
                 
-                <!-- Адаптивная круглая кнопка закрытия «X» (комфортный размер для пальцев на мобилке и десктопе) -->
+                <!-- Адаптивная круглая кнопка закрытия «X» -->
                 <button onclick="closeProduct()" class="absolute top-4 right-4 md:top-0 md:right-0 z-50 bg-white/90 backdrop-blur border border-zinc-200/50 md:border-transparent md:bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950 rounded-full w-11 h-11 md:w-12 md:h-12 flex items-center justify-center shadow-md md:shadow-none active:scale-90 transition-all cursor-pointer">
                     <i class="fas fa-times text-sm md:text-base"></i>
                 </button>
@@ -242,7 +242,7 @@
                             Базовая цена - <span class="font-bold text-zinc-900" id="mPriceRaw">0.00</span>
                         </div>
 
-                        <!-- Единая Кнопка Написания отзыва и Оценки (увеличена высота для пальцев) -->
+                        <!-- Единая Кнопка Написания отзыва и Оценки -->
                         <div class="pt-2">
                             <button onclick="openFeedbackModal()" class="w-full py-3.5 md:py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg md:rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer">
                                 <i class="fas fa-pen-fancy"></i>
@@ -251,7 +251,7 @@
                         </div>
                     </div>
 
-                    <!-- Цена крупно (Автоматически меняется при выборе опции) -->
+                    <!-- Цена крупно -->
                     <div id="mPrice" class="text-2xl md:text-3xl font-black text-blue-600 mb-6 bg-blue-50/50 px-4 py-2 rounded-xl md:rounded-2xl w-max"></div>
 
                     <!-- Выбор конфигурации -->
@@ -263,7 +263,7 @@
                         <div id="mSizes" class="flex flex-wrap gap-2.5 mb-2"></div>
                     </div>
 
-                    <!-- Действия (высокие комфортные кнопки на десктопе и мобилках) -->
+                    <!-- Действия -->
                     <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100 md:relative md:border-t-0 md:p-0 md:bg-transparent flex gap-3 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] md:shadow-none">
                         <div class="flex items-center border border-zinc-200 rounded-xl md:rounded-2xl h-14 bg-zinc-50 shrink-0">
                             <button onclick="updateQty(-1)" class="w-12 h-full flex items-center justify-center text-lg font-bold text-zinc-500 hover:text-zinc-950 active:bg-zinc-200 rounded-l-xl md:rounded-l-2xl transition-all">-</button>
@@ -282,7 +282,7 @@
                         <p id="mDesc" class="text-zinc-500 text-sm leading-relaxed"></p>
                     </div>
 
-                    <!-- Таблица характеристик (скругление зависит от экрана) -->
+                    <!-- Таблица характеристик -->
                     <div class="mt-4 bg-zinc-50 rounded-xl md:rounded-2xl border border-zinc-100 overflow-hidden">
                         <button onclick="toggleSizeChart()" class="w-full flex justify-between items-center p-4 text-xs font-black text-zinc-800 uppercase tracking-wider active:bg-zinc-100 transition-colors">
                             <span class="flex items-center gap-2"><i class="fas fa-microchip text-blue-600"></i> Характеристики устройства</span>
@@ -310,7 +310,6 @@
             <h3 class="font-black text-zinc-950 text-center text-base mb-1">Оставить отзыв и оценку</h3>
             <p class="text-zinc-400 text-[10px] text-center uppercase tracking-wider font-extrabold mb-4">Поделитесь своим впечатлением</p>
             
-            <!-- Тач-зоны звёздочек увеличены с помощью пэддингов p-2.5 -->
             <div class="flex justify-center gap-1.5 mb-5 text-2xl text-zinc-300" id="feedbackStarSelector">
                 <button onclick="setFeedbackStars(1)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
                 <button onclick="setFeedbackStars(2)" class="p-2.5 hover:scale-110 transition-transform"><i class="far fa-star"></i></button>
@@ -360,7 +359,8 @@
                 <span class="text-zinc-400 font-bold text-xs uppercase tracking-wider">Итоговая сумма</span>
                 <span id="cartTotal" class="text-2xl font-black text-zinc-950 bg-blue-50 px-4 py-1.5 rounded-xl border border-blue-100">0 сум</span>
             </div>
-            <button onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
+            <!-- В Telegram WebApp эта кнопка скрывается, уступая место нативной кнопке внизу, предотвращая дублирование -->
+            <button id="cartCheckoutBtn" onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fas fa-lock text-xs"></i>
                 <span>Оформить заказ</span>
             </button>
@@ -561,7 +561,6 @@
 
             userId = String(userId).trim();
             if (userId === "") {
-                // Если запущен вне Телеграм — сразу блокируем доступ и сообщаем об этом. Никаких ручных окон ввода!
                 showToast("Доступ заблокирован: запустите приложение внутри Telegram с аккаунта администратора!", "error");
                 return;
             }
@@ -1200,11 +1199,51 @@
             }
 
             // Добавляем в корзину с учетом правильной цены для выбранной опции
-            cart.push({ ...currentProduct, price: finalPrice, cartId: Date.now(), selectedSize: targetSize, qty });
+            // Сначала проверим, есть ли уже этот товар с ТАКОЙ ЖЕ опцией в корзине
+            const existingIndex = cart.findIndex(i => i.id === currentProduct.id && i.selectedSize === targetSize);
+            if (existingIndex > -1) {
+                const newTotalQty = cart[existingIndex].qty + qty;
+                if (newTotalQty > stockNumber) {
+                    showToast(`Недостаточно товара на складе! Всего доступно: ${stockNumber} шт.`, 'error');
+                    return;
+                }
+                cart[existingIndex].qty = newTotalQty;
+            } else {
+                cart.push({ ...currentProduct, price: finalPrice, cartId: Date.now(), selectedSize: targetSize, qty });
+            }
+            
             closeProduct();
             updateCart();
             showToast('Устройство добавлено в корзину!', 'success');
             try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+        }
+
+        // Интерактивное управление количеством прямо в корзине
+        function updateCartQty(idx, change) {
+            const item = cart[idx];
+            const newQty = item.qty + change;
+            if (newQty <= 0) {
+                // Если количество падает до 0, удаляем товар из корзины
+                cart.splice(idx, 1);
+                showToast('Товар удален из корзины', 'success');
+            } else {
+                // Проверяем лимиты склада
+                const availableStock = item.sizes[item.selectedSize];
+                let stockNumber = 10;
+                if (availableStock !== null && typeof availableStock === 'object') {
+                    stockNumber = parseInt(availableStock.stock) || 0;
+                } else {
+                    stockNumber = (typeof availableStock === 'boolean') ? (availableStock ? 10 : 0) : (parseInt(availableStock) || 0);
+                }
+
+                if (newQty > stockNumber) {
+                    showToast(`Недостаточно товара на складе! Доступно: ${stockNumber} шт.`, 'error');
+                    return;
+                }
+                item.qty = newQty;
+            }
+            updateCart();
+            try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e){}
         }
 
         function updateCart() {
@@ -1212,14 +1251,24 @@
             const badge = document.getElementById('cartBadge');
             const totalEl = document.getElementById('cartTotal');
             
-            badge.innerText = cart.length;
+            badge.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
             badge.classList.toggle('opacity-0', cart.length===0);
             
             const headerCount = document.getElementById('cartHeaderCount');
-            if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.length})` : '';
+            if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.reduce((sum, item) => sum + item.qty, 0)})` : '';
 
             const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
             totalEl.innerText = formatMoney(total);
+
+            // Устранение дублирования кнопок на Telegram WebApp
+            const checkoutBtn = document.getElementById('cartCheckoutBtn');
+            if (checkoutBtn) {
+                if (isTelegram && cart.length > 0) {
+                    checkoutBtn.classList.add('hidden'); // На ТГ используем только нативную нижнюю кнопку
+                } else {
+                    checkoutBtn.classList.remove('hidden'); // В браузере показываем встроенную кнопку
+                }
+            }
 
             if(cart.length === 0) {
                 cnt.innerHTML = `
@@ -1230,19 +1279,25 @@
                 `;
             } else {
                 cnt.innerHTML = cart.map((i, idx) => `
-                    <div class="flex gap-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-100/85 hover:border-zinc-200/90 transition-all">
+                    <div class="flex gap-4 bg-zinc-50 p-3 rounded-xl md:rounded-2xl border border-zinc-100/85 hover:border-zinc-200/90 transition-all">
                         <img src="${i.images && i.images[0] ? i.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=WEISI'}" class="w-16 h-16 object-cover rounded-xl bg-white border border-zinc-100 shrink-0">
                         <div class="flex-1 min-w-0 flex flex-col justify-between">
                             <div>
                                 <div class="flex justify-between items-start">
                                     <h4 class="font-extrabold text-xs text-zinc-950 truncate mr-2">${i.name}</h4>
-                                    <button onclick="removeFromCart(${idx})" class="text-zinc-400 p-1 hover:text-red-600 transition-colors"><i class="fas fa-trash-alt text-[10px]"></i></button>
+                                    <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1 hover:text-red-500 transition-colors cursor-pointer"><i class="fas fa-trash-alt text-[11px]"></i></button>
                                 </div>
                                 <p class="text-[10px] text-zinc-400 font-bold mt-0.5">Опция: <span class="text-zinc-800 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-md ml-1 text-[9px] font-black">${i.selectedSize}</span></p>
                             </div>
                             <div class="flex justify-between items-end mt-1.5">
                                 <span class="text-blue-600 font-black text-xs">${formatMoney((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1))}</span>
-                                <span class="text-[9px] bg-white border border-zinc-200/70 px-2 py-0.5 rounded-lg text-zinc-500 font-black">кол-во: x${i.qty}</span>
+                                
+                                <!-- Улучшенное управление количеством товара прямо из шторки корзины -->
+                                <div class="flex items-center border border-zinc-200 rounded-lg h-8 bg-white overflow-hidden shadow-sm shrink-0">
+                                    <button onclick="updateCartQty(${idx}, -1)" class="w-8 h-full flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-zinc-950 hover:bg-zinc-50 active:bg-zinc-100 transition-colors cursor-pointer">-</button>
+                                    <span class="w-6 text-center font-black text-[11px] text-zinc-900">${i.qty}</span>
+                                    <button onclick="updateCartQty(${idx}, 1)" class="w-8 h-full flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-zinc-950 hover:bg-zinc-50 active:bg-zinc-100 transition-colors cursor-pointer">+</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1276,33 +1331,6 @@
             cart.splice(idx, 1); 
             updateCart(); 
             showToast('Товар удален из корзины', 'success');
-        }
-
-        function sendOrder() {
-            if(cart.length === 0) {
-                showToast("Ваша корзина пока пуста!", "error");
-                return;
-            }
-            if (isTelegram && tg) {
-                const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
-                const data = { 
-                    total_price: total, 
-                    items: cart.map(i => ({ 
-                        name: i.name, 
-                        price: parseFloat(i.price) || 0, 
-                        qty: parseInt(i.qty) || 1, 
-                        size: i.selectedSize 
-                    })) 
-                };
-                try {
-                    tg.sendData(JSON.stringify(data));
-                } catch (e) {
-                    console.error("sendData ошибка, переход к резервной модалке", e);
-                    toggleCheckoutModal();
-                }
-            } else {
-                toggleCheckoutModal();
-            }
         }
 
         function toggleCheckoutModal() {
@@ -1351,20 +1379,6 @@
                 }
 
                 if (result.status === 'ok') {
-                    // Списание остатков на сервере и локально
-                    cart.forEach(cartItem => {
-                        const targetProd = products.find(p => p.id === cartItem.id);
-                        if (targetProd && targetProd.sizes && targetProd.sizes[cartItem.selectedSize] !== undefined) {
-                            if (typeof targetProd.sizes[cartItem.selectedSize] === 'object') {
-                                const currentStock = parseInt(targetProd.sizes[cartItem.selectedSize].stock) || 0;
-                                targetProd.sizes[cartItem.selectedSize].stock = Math.max(0, currentStock - cartItem.qty);
-                            } else {
-                                const currentStock = parseInt(targetProd.sizes[cartItem.selectedSize]) || 0;
-                                targetProd.sizes[cartItem.selectedSize] = Math.max(0, currentStock - cartItem.qty);
-                            }
-                        }
-                    });
-
                     cart = [];
                     updateCart();
                     toggleCheckoutModal();
@@ -1411,9 +1425,9 @@
                 <div class="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50 animate-slide-up">
                     <img src="${img}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-zinc-950/60 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-left"></i></button>` : ''}
-                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1.5 text-xs"><i class="fas fa-trash"></i></button>
-                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-right"></i></button>` : ''}
+                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
+                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
+                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -1463,8 +1477,8 @@
                             
                             <div class="flex gap-2 mt-3">
                                 <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'В НАЛИЧИИ' : 'СКРЫТ'}</button>
-                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
-                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
+                                <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors cursor-pointer"><i class="fas fa-pencil-alt text-xs"></i></button>
+                                <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors cursor-pointer"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
                         </div>
                     </div>
@@ -1485,7 +1499,7 @@
                                         stock = (typeof rawStock === 'boolean') ? (rawStock ? 10 : 0) : (parseInt(rawStock) || 0);
                                     }
                                     return `
-                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
+                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors cursor-pointer ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
                                             ${s} (${stock} шт.${optPriceText})
                                         </button>
                                     `;
@@ -1575,8 +1589,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (tg) {
                 try {
-                    tg.ready();
-                    tg.expand();
+                    tg.ready();  // Оповещаем ТГ о готовности интерфейса
+                    tg.expand(); // Расширяем окно мини-аппа на максимум
+                    
+                    // Регистрация нативного события клика по синей кнопке внизу Telegram
                     tg.onEvent('mainButtonClicked', sendOrder);
                 } catch(e) {
                     console.error("Ошибка при инициализации API Telegram:", e);
