@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-# Подключение PostgreSQL (для Neon)
+# Подключение PostgreSQL (для Render/Neon)
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
@@ -40,7 +40,7 @@ log = logging.getLogger("bot")
 # Глобальная инициализация бота для использования в веб-обработчиках
 bot = Bot(token=settings.BOT_TOKEN)
 
-# --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ (PostgreSQL Neon Tech) ---
+# --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
 class DBManager:
     def __init__(self):
         self.check_connection_status()
@@ -59,30 +59,19 @@ class DBManager:
         else:
             log.info("✅ Библиотека psycopg2 успешно загружена")
         
-        # Безопасное логирование ADMIN_ID для отладки
-        admin_id_str = str(settings.ADMIN_ID or '').strip()
-        if not admin_id_str:
-            log.warning("⚠️ Переменная ADMIN_ID не настроена на Render! Доступ в админку временно открыт для всех ID.")
-        else:
-            masked_id = admin_id_str[:3] + "*" * (len(admin_id_str) - 5) + admin_id_str[-2:] if len(admin_id_str) > 5 else "***"
-            log.info(f"🔒 Переменная ADMIN_ID успешно считана: {masked_id}")
-
         if settings.DATABASE_URL and psycopg2:
-            log.info("🚀 Успешное подключение к PostgreSQL (Neon)...")
+            log.info("🚀 Подключаемся к PostgreSQL (Neon)...")
         else:
-            log.warning("⚠️ ПЕРЕКЛЮЧЕНИЕ НА SQLite (Запасной вариант)")
+            log.warning("⚠️ ПЕРЕКЛЮЧЕНИЕ НА SQLite (Файловая база)")
         print("------------------------------------------------")
 
     def get_conn(self):
         if self.is_pg:
-            db_url = settings.DATABASE_URL
-            # Форсируем SSL-режим для безопасного подключения к Neon PostgreSQL
-            if "sslmode=" not in db_url:
-                if "?" in db_url:
-                    db_url += "&sslmode=require"
-                else:
-                    db_url += "?sslmode=require"
-            return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+            # Гарантируем SSL для защищенного подключения к Neon Tech
+            url = settings.DATABASE_URL
+            if "?sslmode=" not in url:
+                url += "?sslmode=require"
+            return psycopg2.connect(url, cursor_factory=RealDictCursor)
         conn = sqlite3.connect("orders.db")
         conn.row_factory = sqlite3.Row
         return conn
@@ -91,55 +80,87 @@ class DBManager:
         conn = self.get_conn()
         cur = conn.cursor()
         
-        id_serial = "SERIAL PRIMARY KEY" if self.is_pg else "INTEGER PRIMARY KEY AUTOINCREMENT"
-        json_type = "JSONB" if self.is_pg else "TEXT"
-
-        # Первичное создание таблиц
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS products (
-                id TEXT PRIMARY KEY,
-                name TEXT,
-                price REAL,
-                description TEXT,
-                category TEXT,
-                images {json_type},
-                sizes {json_type},
-                is_available INTEGER DEFAULT 1
-            )
-        """)
-        
-        cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS orders (
-                id {id_serial},
-                user_id BIGINT,
-                user_name TEXT,
-                phone TEXT,
-                address TEXT,
-                items {json_type},
-                total REAL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        # 1. Создание базовых таблиц с правильными типами данных
+        if self.is_pg:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS products (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    price REAL,
+                    description TEXT,
+                    category TEXT,
+                    images JSONB,
+                    sizes JSONB,
+                    is_available INTEGER DEFAULT 1,
+                    size_chart TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS orders (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT,
+                    user_name TEXT,
+                    phone TEXT,
+                    address TEXT,
+                    items JSONB,
+                    total REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+        else:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS products (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    price REAL,
+                    description TEXT,
+                    category TEXT,
+                    images TEXT,
+                    sizes TEXT,
+                    is_available INTEGER DEFAULT 1,
+                    size_chart TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id BIGINT,
+                    user_name TEXT,
+                    phone TEXT,
+                    address TEXT,
+                    items TEXT,
+                    total REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
         conn.commit()
 
-        # САМОВОССТАНОВЛЕНИЕ: Проверяем и накатываем недостающие колонки в существующие таблицы
-        columns_to_migrate = [
-            ("size_chart", "TEXT"),
-            ("reviews", f"{json_type} DEFAULT '[]'"),
-            ("ratings", f"{json_type} DEFAULT '[]'")
+        # 2. Автоматическое самовосстановление (Миграция структуры таблиц)
+        # Добавляем новые JSONB (Postgres) или TEXT (SQLite) поля, если таблицы были созданы ранее
+        columns_to_add = [
+            ("reviews", "JSONB DEFAULT '[]'" if self.is_pg else "TEXT DEFAULT '[]'"),
+            ("ratings", "JSONB DEFAULT '[]'" if self.is_pg else "TEXT DEFAULT '[]'"),
+            ("description", "TEXT"),
+            ("size_chart", "TEXT")
         ]
-        
-        for col_name, col_type in columns_to_migrate:
-            try:
-                cur.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_type}")
-                conn.commit()
-                log.info(f"⚙️ Самовосстановление БД: Успешно добавлена недостающая колонка {col_name}")
-            except Exception as e:
-                conn.rollback()
-                # Игнорируем ошибку, если колонка уже существует в базе
-                log.debug(f"Колонка {col_name} уже создана или миграция пропущена: {e}")
 
-        # Автоматическая загрузка товаров (Seeding) в базу Neon, если она пуста
+        for col_name, col_def in columns_to_add:
+            try:
+                if self.is_pg:
+                    # В Postgres используем безопасный ALTER TABLE ADD COLUMN IF NOT EXISTS
+                    cur.execute(f"ALTER TABLE products ADD COLUMN IF NOT EXISTS {col_name} {col_def}")
+                else:
+                    # В SQLite проверяем схему через PRAGMA
+                    cur.execute("PRAGMA table_info(products)")
+                    existing_cols = [row[1] for row in cur.fetchall()]
+                    if col_name not in existing_cols:
+                        cur.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_def}")
+            except Exception as e:
+                log.warning(f"Не удалось добавить колонку {col_name} (возможно, уже есть): {e}")
+        
+        conn.commit()
+
+        # 3. Наполнение девайсами по умолчанию, если база пуста
         cur.execute("SELECT COUNT(*) as count FROM products")
         count_val = cur.fetchone()
         count = count_val['count'] if isinstance(count_val, dict) else count_val[0]
@@ -200,6 +221,7 @@ class DBManager:
                     "ratings": [5, 4, 5, 5]
                 }
             ]
+            
             for p in default_products:
                 images_json = json.dumps(p['images'])
                 sizes_json = json.dumps(p['sizes'])
@@ -265,10 +287,12 @@ class DBManager:
         images_json = json.dumps(p['images'])
         sizes_json = json.dumps(p['sizes'])
         
+        # Получаем текущие отзывы, чтобы случайно не стереть их при редактировании
         if self.is_pg:
             cur.execute("SELECT reviews, ratings FROM products WHERE id=%s", (p['id'],))
         else:
             cur.execute("SELECT reviews, ratings FROM products WHERE id=?", (p['id'],))
+            
         row = cur.fetchone()
         if row:
             reviews_json = json.dumps(row['reviews']) if not isinstance(row['reviews'], str) else row['reviews']
@@ -359,14 +383,13 @@ class DBManager:
             if self.is_pg:
                 cur.execute("UPDATE products SET sizes=%s::jsonb WHERE id=%s", (new_json, pid))
             else:
-                cur.execute("UPDATE products SET sizes=? WHERE id=%s", (new_json, pid))
+                cur.execute("UPDATE products SET sizes=? WHERE id=?", (new_json, pid))
             conn.commit()
         conn.close()
 
     def add_feedback(self, pid, author, text, rating):
         conn = self.get_conn()
         cur = conn.cursor()
-        
         if self.is_pg:
             cur.execute("SELECT reviews, ratings FROM products WHERE id=%s", (pid,))
         else:
@@ -524,33 +547,22 @@ async def api_create_order(request):
         log.error(f"Ошибка сохранения заказа через сайт: {e}")
         return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
-# Эндпоинт проверки прав доступа администратора
+# Строгая проверка Telegram ID администратора (только на бэкенде)
 async def api_admin_check(request):
     try:
         data = await request.json()
-        user_id = str(data.get('user_id', '')).strip()
-        allowed_admin = str(settings.ADMIN_ID or '').strip()
+        user_id = str(data.get("user_id", "")).strip()
+        allowed_admin = str(settings.ADMIN_ID).strip()
         
-        # Детальный лог в консоль Render для отладки
-        log.info(f"Проверка входа. Полученный ID: '{user_id}' | Разрешенный ID: '{allowed_admin}'")
-        
-        # Если переменная ADMIN_ID на Render не настроена, временно пропускаем
-        if not allowed_admin:
-            log.warning("ADMIN_ID на бэкенде пустой. Пропускаем по умолчанию.")
+        if user_id and allowed_admin and user_id == allowed_admin:
             return web.json_response({"is_admin": True})
-            
-        if user_id == allowed_admin:
-            log.info("Авторизация админа успешно пройдена.")
-            return web.json_response({"is_admin": True})
-            
-        log.warning(f"Отказ в доступе. ID '{user_id}' не совпадает с '{allowed_admin}'")
-        return web.json_response({
-            "is_admin": False, 
-            "msg": f"Доступ заблокирован: Ваш ID ({user_id or 'не определен'}) не совпадает с ADMIN_ID!"
-        })
+        else:
+            return web.json_response({
+                "is_admin": False, 
+                "msg": f"Доступ заблокирован: Ваш ID ({user_id if user_id else 'не определен'}) не совпадает с ADMIN_ID!"
+            })
     except Exception as e:
-        log.error(f"Ошибка проверки администратора: {e}")
-        return web.json_response({"is_admin": False, "msg": f"Ошибка сервера: {str(e)}"}, status=400)
+        return web.json_response({"is_admin": False, "msg": str(e)}, status=500)
 
 async def serve_index(request):
     try:
@@ -578,7 +590,11 @@ def location_kb():
     return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="📍 Отправить геолокацию", request_location=True)], [KeyboardButton(text="⏩ Пропустить (введу вручную)")]], resize_keyboard=True, one_time_keyboard=True)
 
 async def cmd_start(m: Message):
-    await m.answer(f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в WEISI TECH.\nНажмите кнопку ниже, чтобы открыть каталог 👇", reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+    await m.answer(
+        f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в WEISI TECH.\nНажмите кнопку ниже, чтобы открыть каталог 👇", 
+        reply_markup=main_kb(), 
+        parse_mode=ParseMode.HTML
+    )
 
 async def cmd_help(m: Message):
     await m.answer("Команды:\n/start - Главное меню\n/orders - История заказов")
