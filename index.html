@@ -202,7 +202,7 @@
         <div class="flex-1 overflow-y-auto md:overflow-visible pb-28 md:pb-16 bg-white">
             <div class="md:max-w-5xl md:mx-auto md:p-8 md:mt-4 md:grid md:grid-cols-2 md:gap-12 relative">
                 
-                <!-- Адаптивная круглая кнопка закрытия «X» -->
+                <!-- Адаптивная круглая кнопка закрытия «X» (Гарантированно круглая с равными w и h) -->
                 <button onclick="closeProduct()" class="absolute top-4 right-4 md:top-0 md:right-0 z-50 bg-white/90 backdrop-blur border border-zinc-200/50 md:border-transparent md:bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950 rounded-full w-11 h-11 md:w-12 md:h-12 flex items-center justify-center shadow-md md:shadow-none active:scale-90 transition-all cursor-pointer">
                     <i class="fas fa-times text-sm md:text-base"></i>
                 </button>
@@ -345,12 +345,15 @@
         </div>
     </div>
 
-    <!-- КОРЗИНА -->
+    <!-- КОРЗИНА (Шторка с абсолютно круглыми кнопками) -->
     <div id="cartOverlay" class="fixed inset-0 bg-zinc-950/70 z-[60] hidden backdrop-blur-sm transition-opacity duration-300" onclick="toggleCart()"></div>
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-zinc-100 md:rounded-l-[32px]">
         <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 md:rounded-tl-[32px]">
             <h2 class="text-base font-black uppercase tracking-wider text-zinc-950">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1 font-black"></span></h2>
-            <button onclick="toggleCart()" class="p-2.5 bg-white text-zinc-500 hover:text-zinc-950 rounded-full shadow-sm border border-zinc-200/60 active:scale-95 transition-all"><i class="fas fa-times text-sm"></i></button>
+            <!-- Круглая кнопка закрытия Х (Гарантированно круглая w-10 h-10) -->
+            <button onclick="toggleCart()" class="w-10 h-10 flex items-center justify-center bg-white text-zinc-500 hover:text-zinc-950 rounded-full shadow-sm border border-zinc-200/60 active:scale-95 transition-all">
+                <i class="fas fa-times text-sm"></i>
+            </button>
         </div>
         <div id="cartItems" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
         
@@ -359,8 +362,8 @@
                 <span class="text-zinc-400 font-bold text-xs uppercase tracking-wider">Итоговая сумма</span>
                 <span id="cartTotal" class="text-2xl font-black text-zinc-950 bg-blue-50 px-4 py-1.5 rounded-xl border border-blue-100">0 сум</span>
             </div>
-            <!-- В Telegram WebApp эта кнопка скрывается, уступая место нативной кнопке внизу, предотвращая дублирование -->
-            <button id="cartCheckoutBtn" onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
+            <!-- ОФОРМИТЬ ЗАКАЗ (Премиальная высокая кнопка h-14, всегда активная) -->
+            <button id="cartCheckoutBtn" onclick="sendOrder()" class="w-full bg-blue-600 text-white h-14 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fas fa-lock text-xs"></i>
                 <span>Оформить заказ</span>
             </button>
@@ -372,7 +375,8 @@
         <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
             <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
                 <h3 class="font-black text-zinc-950 uppercase tracking-wider text-sm">Оформление доставки</h3>
-                <button onclick="toggleCheckoutModal()" class="p-2.5 bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100">
+                <!-- Круглая кнопка Х (Гарантированно круглая w-10 h-10) -->
+                <button onclick="toggleCheckoutModal()" class="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100">
                     <i class="fas fa-times text-zinc-500"></i>
                 </button>
             </div>
@@ -391,7 +395,7 @@
                 </div>
                 
                 <div class="pt-2">
-                    <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 cursor-pointer">
+                    <button type="submit" id="submitOrderBtn" class="w-full bg-blue-600 text-white h-14 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 cursor-pointer">
                         Подтвердить заказ
                     </button>
                 </div>
@@ -1061,7 +1065,6 @@
             });
         }
 
-        // Отправка отзыва напрямую в Neon PostgreSQL через API
         async function submitFeedback() {
             const author = document.getElementById('feedbackAuthor').value.trim() || 'Анонимный покупатель';
             const text = document.getElementById('feedbackText').value.trim();
@@ -1114,7 +1117,7 @@
             container.innerHTML = reviews.map(r => {
                 const reviewStars = r.rating ? getStarsHtml(r.rating) : '';
                 return `
-                    <div class="bg-zinc-50 p-4 rounded-xl border border-zinc-100/80 text-xs animate-slide-up">
+                    <div class="bg-zinc-50 p-4 rounded-xl md:rounded-2xl border border-zinc-100/80 text-xs animate-slide-up">
                         <div class="flex justify-between items-center mb-1">
                             <span class="font-extrabold text-zinc-800">${r.author}</span>
                             <div class="flex items-center gap-1.5">
@@ -1128,7 +1131,6 @@
             }).join('');
         }
 
-        // Выбор конфигурации (смена цены в зависимости от выбранного варианта)
         function selectSize(size) {
             selectedSize = size;
             document.querySelectorAll('.size-btn').forEach(b => {
@@ -1198,8 +1200,6 @@
                 return;
             }
 
-            // Добавляем в корзину с учетом правильной цены для выбранной опции
-            // Сначала проверим, есть ли уже этот товар с ТАКОЙ ЖЕ опцией в корзине
             const existingIndex = cart.findIndex(i => i.id === currentProduct.id && i.selectedSize === targetSize);
             if (existingIndex > -1) {
                 const newTotalQty = cart[existingIndex].qty + qty;
@@ -1218,16 +1218,14 @@
             try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
         }
 
-        // Интерактивное управление количеством прямо в корзине
+        // Интерактивное управление количеством в шторке корзины
         function updateCartQty(idx, change) {
             const item = cart[idx];
             const newQty = item.qty + change;
             if (newQty <= 0) {
-                // Если количество падает до 0, удаляем товар из корзины
                 cart.splice(idx, 1);
                 showToast('Товар удален из корзины', 'success');
             } else {
-                // Проверяем лимиты склада
                 const availableStock = item.sizes[item.selectedSize];
                 let stockNumber = 10;
                 if (availableStock !== null && typeof availableStock === 'object') {
@@ -1251,8 +1249,11 @@
             const badge = document.getElementById('cartBadge');
             const totalEl = document.getElementById('cartTotal');
             
+            // Записываем текущее состояние корзины в локальный кеш
+            localStorage.setItem('weisi_tech_cart', JSON.stringify(cart));
+
             badge.innerText = cart.reduce((sum, item) => sum + item.qty, 0);
-            badge.classList.toggle('opacity-0', cart.length===0);
+            badge.classList.toggle('opacity-0', cart.length === 0);
             
             const headerCount = document.getElementById('cartHeaderCount');
             if(headerCount) headerCount.innerText = cart.length > 0 ? `(${cart.reduce((sum, item) => sum + item.qty, 0)})` : '';
@@ -1260,13 +1261,13 @@
             const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
             totalEl.innerText = formatMoney(total);
 
-            // Устранение дублирования кнопок на Telegram WebApp
+            // Кнопка заказать в Telegram WebApp скрывается, чтобы избежать дублирования
             const checkoutBtn = document.getElementById('cartCheckoutBtn');
             if (checkoutBtn) {
                 if (isTelegram && cart.length > 0) {
-                    checkoutBtn.classList.add('hidden'); // На ТГ используем только нативную нижнюю кнопку
+                    checkoutBtn.classList.add('hidden');
                 } else {
-                    checkoutBtn.classList.remove('hidden'); // В браузере показываем встроенную кнопку
+                    checkoutBtn.classList.remove('hidden');
                 }
             }
 
@@ -1279,7 +1280,7 @@
                 `;
             } else {
                 cnt.innerHTML = cart.map((i, idx) => `
-                    <div class="flex gap-4 bg-zinc-50 p-3 rounded-xl md:rounded-2xl border border-zinc-100/85 hover:border-zinc-200/90 transition-all">
+                    <div class="flex gap-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-100/85 hover:border-zinc-200/90 transition-all">
                         <img src="${i.images && i.images[0] ? i.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=WEISI'}" class="w-16 h-16 object-cover rounded-xl bg-white border border-zinc-100 shrink-0">
                         <div class="flex-1 min-w-0 flex flex-col justify-between">
                             <div>
@@ -1292,7 +1293,6 @@
                             <div class="flex justify-between items-end mt-1.5">
                                 <span class="text-blue-600 font-black text-xs">${formatMoney((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1))}</span>
                                 
-                                <!-- Улучшенное управление количеством товара прямо из шторки корзины -->
                                 <div class="flex items-center border border-zinc-200 rounded-lg h-8 bg-white overflow-hidden shadow-sm shrink-0">
                                     <button onclick="updateCartQty(${idx}, -1)" class="w-8 h-full flex items-center justify-center text-xs font-bold text-zinc-500 hover:text-zinc-950 hover:bg-zinc-50 active:bg-zinc-100 transition-colors cursor-pointer">-</button>
                                     <span class="w-6 text-center font-black text-[11px] text-zinc-900">${i.qty}</span>
@@ -1331,6 +1331,15 @@
             cart.splice(idx, 1); 
             updateCart(); 
             showToast('Товар удален из корзины', 'success');
+        }
+
+        // Метод отправки заказа ВСЕГДА открывает модальное окно на сайте, делая процесс 100% рабочим в любом WebApp режиме!
+        function sendOrder() {
+            if(cart.length === 0) {
+                showToast("Ваша корзина пока пуста!", "error");
+                return;
+            }
+            toggleCheckoutModal();
         }
 
         function toggleCheckoutModal() {
@@ -1379,6 +1388,20 @@
                 }
 
                 if (result.status === 'ok') {
+                    // Списание остатков на сервере и локально
+                    cart.forEach(cartItem => {
+                        const targetProd = products.find(p => p.id === cartItem.id);
+                        if (targetProd && targetProd.sizes && targetProd.sizes[cartItem.selectedSize] !== undefined) {
+                            if (typeof targetProd.sizes[cartItem.selectedSize] === 'object') {
+                                const currentStock = parseInt(targetProd.sizes[cartItem.selectedSize].stock) || 0;
+                                targetProd.sizes[cartItem.selectedSize].stock = Math.max(0, currentStock - cartItem.qty);
+                            } else {
+                                const currentStock = parseInt(targetProd.sizes[cartItem.selectedSize]) || 0;
+                                targetProd.sizes[cartItem.selectedSize] = Math.max(0, currentStock - cartItem.qty);
+                            }
+                        }
+                    });
+
                     cart = [];
                     updateCart();
                     toggleCheckoutModal();
@@ -1425,9 +1448,9 @@
                 <div class="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50 animate-slide-up">
                     <img src="${img}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-zinc-950/60 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-left"></i></button>` : ''}
-                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1"><i class="fas fa-trash"></i></button>
-                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1"><i class="fas fa-arrow-right"></i></button>` : ''}
+                        ${idx > 0 ? `<button type="button" onclick="movePhoto(${idx}, -1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-left"></i></button>` : ''}
+                        <button type="button" onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-500 p-1.5 text-xs"><i class="fas fa-trash"></i></button>
+                        ${idx < uploadedImages.length - 1 ? `<button type="button" onclick="movePhoto(${idx}, 1)" class="text-white hover:text-blue-400 p-1.5 text-xs"><i class="fas fa-arrow-right"></i></button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -1467,12 +1490,12 @@
             list.innerHTML = products.map(p => `
                 <div class="bg-white border border-zinc-200/80 p-4 rounded-xl md:rounded-[24px] mb-4 shadow-sm hover:shadow transition-shadow">
                     <div class="flex gap-4">
-                        <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=No'}" class="w-20 h-20 object-cover rounded-lg md:rounded-xl bg-white border border-zinc-200/60 shrink-0">
+                        <img src="${p.images && p.images[0] ? p.images[0] : 'https://placehold.co/100x100/f4f4f5/0066FF?text=No'}" class="w-20 h-20 object-cover rounded-xl bg-white border border-zinc-200/60 shrink-0">
                         <div class="flex-1 min-w-0 pr-1 flex flex-col justify-between">
                             <div>
                                 <div class="font-extrabold text-sm text-zinc-950 truncate mb-1" title="${p.name}">${p.name}</div>
                                 <div class="text-blue-600 font-extrabold text-xs mb-1">${formatMoney(p.price)}</div>
-                                <div class="text-[9px] text-zinc-400 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
+                                <div class="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">${translateCat(p.category)}</div>
                             </div>
                             
                             <div class="flex gap-2 mt-3">
@@ -1589,13 +1612,22 @@
         document.addEventListener('DOMContentLoaded', () => {
             if (tg) {
                 try {
-                    tg.ready();  // Оповещаем ТГ о готовности интерфейса
-                    tg.expand(); // Расширяем окно мини-аппа на максимум
-                    
-                    // Регистрация нативного события клика по синей кнопке внизу Telegram
+                    tg.ready();
+                    tg.expand();
                     tg.onEvent('mainButtonClicked', sendOrder);
                 } catch(e) {
                     console.error("Ошибка при инициализации API Telegram:", e);
+                }
+            }
+
+            // Восстановление корзины из локального кеша (localStorage)
+            const savedCart = localStorage.getItem('weisi_tech_cart');
+            if (savedCart) {
+                try {
+                    cart = JSON.parse(savedCart);
+                } catch(e) {
+                    console.error("Ошибка десериализации кэша корзины", e);
+                    cart = [];
                 }
             }
 
@@ -1608,20 +1640,17 @@
                     if (orderNameInput) orderNameInput.value = fullName;
                 }
 
-                // Строим подтвержденный Telegram никнейм автора
                 let tgVerifiedName = fullName || 'Telegram пользователь';
                 if (user.username) {
                     tgVerifiedName += ` (@${user.username})`;
                 }
 
-                // Подставляем и намертво блокируем поле ввода автора, делая его безопасным от накруток
                 const feedbackAuthorInput = document.getElementById('feedbackAuthor');
                 if (feedbackAuthorInput) {
                     feedbackAuthorInput.value = tgVerifiedName;
                     feedbackAuthorInput.readOnly = true;
                     feedbackAuthorInput.className = 'w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all bg-zinc-100 text-zinc-500 cursor-not-allowed border-emerald-200';
                     
-                    // Показываем красивый значок верификации ТГ в модалке
                     const wrapper = document.getElementById('feedbackInputWrapper');
                     if (wrapper) {
                         const verifiedBadge = document.createElement('div');
@@ -1649,6 +1678,7 @@
 
             populateOptionsForm(null);
             loadProducts();
+            updateCart(); // Отрисовываем корзину из восстановленного кэша
         });
     </script>
 </body>
