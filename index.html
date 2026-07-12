@@ -331,23 +331,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА РЕЗЕРВНОГО РУЧНОГО ВВОДА TELEGRAM ID ДЛЯ АДМИНИСТРАТОРА -->
-    <div id="adminAuthModal" class="fixed inset-0 bg-zinc-950/70 z-[105] hidden backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this) document.getElementById('adminAuthModal').classList.add('hidden')">
-        <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-sm p-6 shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
-            <h3 class="font-black text-zinc-950 text-center text-base mb-2">Авторизация администратора</h3>
-            <p class="text-zinc-500 text-[11px] text-center mb-5 leading-relaxed">
-                Telegram ID не определен автоматически (вы открыли сайт вне Telegram). Пожалуйста, введите ваш Telegram ID, указанный в настройках Render (ADMIN_ID):
-            </p>
-            <div class="mb-5">
-                <input type="text" id="manualAdminIdInput" placeholder="Например: 123456789" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-center text-sm font-bold outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all bg-zinc-50">
-            </div>
-            <div class="flex gap-2">
-                <button onclick="document.getElementById('adminAuthModal').classList.add('hidden')" class="flex-1 py-3.5 bg-zinc-100 text-zinc-700 rounded-lg md:rounded-xl text-xs font-bold transition-colors">Отмена</button>
-                <button onclick="submitManualAdminId()" class="flex-1 py-3.5 bg-blue-600 text-white rounded-lg md:rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-100 hover:bg-blue-700">Войти</button>
-            </div>
-        </div>
-    </div>
-
     <!-- МОДАЛКА ИЗМЕНЕНИЯ ОСТАТКА НА СКЛАДЕ -->
     <div id="stockModal" class="fixed inset-0 bg-zinc-950/70 z-[115] hidden backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-xs p-6 shadow-2xl border border-zinc-100 animate-slide-up">
@@ -489,7 +472,7 @@
 
                             <div>
                                 <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Характеристики (CSV)</label>
-                                <textarea id="aSizeChartText" class="w-full border-zinc-200 border p-3.5 rounded-xl text-sm h-28 outline-none resize-none font-mono text-xs whitespace-pre bg-zinc-50" placeholder="Выберите категорию для автозаполнения шаблона"></textarea>
+                                <textarea id="aSizeChartText" class="w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm h-28 outline-none resize-none font-mono text-xs whitespace-pre bg-zinc-50" placeholder="Выберите категорию для автозаполнения шаблона"></textarea>
                             </div>
                         </div>
 
@@ -565,9 +548,8 @@
             }
         }
 
-        // Проверка прав администратора по Telegram ID на бэкенде
+        // Автоматическая проверка прав администратора на сервере по реальному Telegram ID
         async function openAdminPanelWithCheck() {
-            // Пытаемся безопасно считать Telegram ID пользователя
             let userId = "";
             try {
                 if (window.Telegram && window.Telegram.WebApp) {
@@ -579,22 +561,12 @@
 
             userId = String(userId).trim();
             if (userId === "") {
-                // Показываем резервную модалку ручного ввода, если ID не определен (например, в браузере)
-                document.getElementById('adminAuthModal').classList.remove('hidden');
+                // Если запущен вне Телеграм — сразу блокируем доступ и сообщаем об этом. Никаких ручных окон ввода!
+                showToast("Доступ заблокирован: запустите приложение внутри Telegram с аккаунта администратора!", "error");
                 return;
             }
 
             await verifyAdminId(userId);
-        }
-
-        // Ручной ввод ID администратора через форму в браузере
-        async function submitManualAdminId() {
-            const idInput = document.getElementById('manualAdminIdInput').value.trim();
-            if (idInput === "") {
-                showToast("Пожалуйста, введите ваш Telegram ID", "error");
-                return;
-            }
-            await verifyAdminId(idInput);
         }
 
         // Отправка ID на сервер для строгой верификации
@@ -609,10 +581,8 @@
                 if (result.is_admin) {
                     openAdminPanel();
                     showToast("Панель администратора открыта!", "success");
-                    document.getElementById('adminAuthModal').classList.add('hidden');
                 } else {
-                    // Выводим развернутое сообщение с их текущим ID, чтобы они могли легко настроить Render
-                    showToast(result.msg || `Доступ ограничен. Ваш Telegram ID: ${id}`, "error");
+                    showToast(result.msg || `Доступ ограничен. Ваш Telegram ID (${id}) не совпадает с ADMIN_ID!`, "error");
                 }
             } catch(e) {
                 showToast("Ошибка сети при проверке прав доступа", "error");
@@ -693,55 +663,6 @@
             } else {
                 addOptionRow('Стандарт', 10, '');
             }
-        }
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `animate-toast flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold text-white transition-all pointer-events-auto ${
-                type === 'success' ? 'bg-zinc-900 border-zinc-800' : 'bg-red-600 border-red-500 shadow-red-200'
-            }`;
-            
-            const icon = type === 'success' 
-                ? '<i class="fas fa-check-circle text-emerald-400 text-sm"></i>' 
-                : '<i class="fas fa-exclamation-circle text-white text-sm"></i>';
-            
-            toast.innerHTML = `${icon} <span class="flex-1">${message}</span>`;
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.add('opacity-0', '-translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function showCustomConfirm(message, onConfirm) {
-            const modal = document.getElementById('confirmDialog');
-            const msgEl = document.getElementById('confirmMessage');
-            const cancelBtn = document.getElementById('confirmCancelBtn');
-            const okBtn = document.getElementById('confirmOkBtn');
-            
-            msgEl.innerText = message;
-            modal.classList.remove('hidden');
-            
-            const handleCancel = () => {
-                modal.classList.add('hidden');
-                cleanup();
-            };
-            
-            const handleConfirm = () => {
-                modal.classList.add('hidden');
-                cleanup();
-                onConfirm();
-            };
-            
-            const cleanup = () => {
-                cancelBtn.removeEventListener('click', handleCancel);
-                okBtn.removeEventListener('click', handleConfirm);
-            };
-            
-            cancelBtn.addEventListener('click', handleCancel);
-            okBtn.addEventListener('click', handleConfirm);
         }
 
         // Загрузка девайсов напрямую со своего сервера (без localStorage)
@@ -1063,7 +984,7 @@
                 pagination: { el: ".swiper-pagination", clickable: true } 
             });
 
-            // Рендер ручных опций и остатка товара на складе (удобные тач-кнопки py-3 px-5)
+            // Рендер ручных опций и остатка товара на складе
             const sizesContainer = document.getElementById('mSizes');
             const sortedSizes = sortSizes(Object.keys(currentProduct.sizes || {}));
             
@@ -1194,7 +1115,7 @@
             container.innerHTML = reviews.map(r => {
                 const reviewStars = r.rating ? getStarsHtml(r.rating) : '';
                 return `
-                    <div class="bg-zinc-50 p-4 rounded-xl md:rounded-2xl border border-zinc-100/80 text-xs animate-slide-up">
+                    <div class="bg-zinc-50 p-4 rounded-xl border border-zinc-100/80 text-xs animate-slide-up">
                         <div class="flex justify-between items-center mb-1">
                             <span class="font-extrabold text-zinc-800">${r.author}</span>
                             <div class="flex items-center gap-1.5">
@@ -1253,7 +1174,7 @@
             if(hasSizesAvailable && !selectedSize) { 
                 try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
                 const sizeHelper = document.getElementById('sizeHelper');
-                sizeHelper.innerText = 'Обязательно укажите опцию / цвет / память!';
+                sizeHelper.innerText = 'Пожалуйста, выберите модификацию!';
                 sizeHelper.className = 'text-xs text-red-500 font-bold animate-pulse';
                 return; 
             }
@@ -1537,11 +1458,11 @@
                             <div>
                                 <div class="font-extrabold text-sm text-zinc-950 truncate mb-1" title="${p.name}">${p.name}</div>
                                 <div class="text-blue-600 font-extrabold text-xs mb-1">${formatMoney(p.price)}</div>
-                                <div class="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">${translateCat(p.category)}</div>
+                                <div class="text-[9px] text-zinc-400 uppercase tracking-wide truncate">${translateCat(p.category)}</div>
                             </div>
                             
                             <div class="flex gap-2 mt-3">
-                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'НА ВИ ТРИНЕ' : 'ПРОДАН'}</button>
+                                <button onclick="toggleStock('${p.id}', ${p.isAvailable})" class="px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${p.isAvailable ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}">${p.isAvailable ? 'В НАЛИЧИИ' : 'СКРЫТ'}</button>
                                 <button onclick="editProduct('${p.id}')" title="Редактировать" class="text-blue-600 bg-white border border-zinc-200 hover:bg-zinc-100 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-pencil-alt text-xs"></i></button>
                                 <button onclick="deleteProduct('${p.id}')" title="Удалить" class="text-rose-600 bg-white border border-zinc-200 hover:bg-rose-50 rounded-lg md:rounded-xl px-3.5 flex items-center justify-center transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>
                             </div>
@@ -1564,7 +1485,7 @@
                                         stock = (typeof rawStock === 'boolean') ? (rawStock ? 10 : 0) : (parseInt(rawStock) || 0);
                                     }
                                     return `
-                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
+                                        <button onclick="changeStockPrompt('${p.id}', '${s}', ${stock})" class="px-2.5 py-1 text-[9px] font-black border rounded-md md:rounded-lg transition-colors ${stock > 0 ? 'bg-zinc-950 text-white border-zinc-950 hover:bg-zinc-800' : 'bg-white text-zinc-400 border-zinc-200 line-through hover:bg-zinc-100'}">
                                             ${s} (${stock} шт.${optPriceText})
                                         </button>
                                     `;
@@ -1682,7 +1603,7 @@
                 if (feedbackAuthorInput) {
                     feedbackAuthorInput.value = tgVerifiedName;
                     feedbackAuthorInput.readOnly = true;
-                    feedbackAuthorInput.classList.add('bg-zinc-100', 'text-zinc-500', 'cursor-not-allowed', 'border-emerald-200');
+                    feedbackAuthorInput.className = 'w-full border-zinc-200 border p-3.5 rounded-lg md:rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all bg-zinc-100 text-zinc-500 cursor-not-allowed border-emerald-200';
                     
                     // Показываем красивый значок верификации ТГ в модалке
                     const wrapper = document.getElementById('feedbackInputWrapper');
@@ -1694,6 +1615,21 @@
                     }
                 }
             }
+
+            // Настройка поиска и автоблокировки админ-панели при ручном вводе секретного кода
+            const searchInput = document.getElementById('searchInput');
+            const handleSearchOrAdmin = (e) => {
+                const val = e.target.value.trim();
+                if(val === SECRET_CODE) { 
+                    e.target.value = ''; 
+                    e.target.blur(); 
+                    openAdminPanelWithCheck();
+                } else { 
+                    renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
+                }
+            };
+            searchInput.addEventListener('input', handleSearchOrAdmin);
+            searchInput.addEventListener('keyup', handleSearchOrAdmin);
 
             populateOptionsForm(null);
             loadProducts();
