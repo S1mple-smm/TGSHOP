@@ -41,6 +41,9 @@
         input:focus { font-size: 16px; } 
         
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Отступ под системные жесты/home-indicator на iOS и других устройствах с "чёлкой" */
+        .safe-area-pb { padding-bottom: max(2.5rem, env(safe-area-inset-bottom)); }
         
         /* Стили для таблицы характеристик */
         .size-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 5px; background: white; }
@@ -150,11 +153,11 @@
         
         <!-- Категории товаров -->
         <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-4 px-4 sticky top-[68px] z-30 bg-slate-50/90 backdrop-blur-md py-3 border-b border-zinc-100/50">
-            <button onclick="filter('All')" class="cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
-            <button onclick="filter('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
-            <button onclick="filter('Laptops')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Ноутбуки</button>
-            <button onclick="filter('Audio')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Наушники</button>
-            <button onclick="filter('Accessories')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Аксессуары</button>
+            <button onclick="filterByCategory('All')" class="cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
+            <button onclick="filterByCategory('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
+            <button onclick="filterByCategory('Laptops')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Ноутбуки</button>
+            <button onclick="filterByCategory('Audio')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Наушники</button>
+            <button onclick="filterByCategory('Accessories')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Аксессуары</button>
         </div>
 
         <!-- Премиальный Баннер техники -->
@@ -534,6 +537,30 @@
         // Переменные для секретного клика по логотипу
         let logoClickCount = 0;
         let logoClickTimeout = null;
+
+        // Всплывающие уведомления (toast) — единая точка для всех success/error сообщений в приложении
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const palette = {
+                success: { bg: 'bg-emerald-600', icon: 'fa-check-circle' },
+                error: { bg: 'bg-red-600', icon: 'fa-times-circle' }
+            };
+            const { bg, icon } = palette[type] || palette.success;
+
+            const toast = document.createElement('div');
+            toast.className = `${bg} text-white text-xs font-bold px-4 py-3 rounded-xl md:rounded-2xl shadow-xl flex items-center gap-2 pointer-events-auto animate-toast`;
+            toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-12px) scale(0.95)';
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
 
         // Функция секретного входа по логотипу (5 кликов) с проверкой прав доступа
         function handleLogoClick() {
@@ -968,8 +995,8 @@
             document.getElementById('mRatingVal').innerText = ratingObj.rating > 0 ? ratingObj.rating : '0.0';
             document.getElementById('mRatingStars').innerHTML = getStarsHtml(ratingObj.rating);
             
-            const reviewsArr = currentProduct.reviews ? currentProduct.reviews.length : 0;
-            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsArr.length} отзывов`;
+            const reviewsCount = currentProduct.reviews ? currentProduct.reviews.length : 0;
+            document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsCount} отзывов`;
             document.getElementById('mPriceRaw').innerText = currentProduct.price.toFixed(2);
 
             const descEl = document.getElementById('mDesc');
@@ -1053,9 +1080,6 @@
             document.getElementById('feedbackModal').classList.remove('hidden');
             setFeedbackStars(5);
         }
-
-        function openReviewModal() { openFeedbackModal(); }
-        function openRatingModal() { openFeedbackModal(); }
 
         function closeFeedbackModal() {
             document.getElementById('feedbackModal').classList.add('hidden');
@@ -1641,7 +1665,7 @@
             });
         }
         
-        function filter(cat) { 
+        function filterByCategory(cat) { 
             document.querySelectorAll('.cat-btn').forEach(b => {
                 b.className = 'cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all';
                 if(b.innerText.includes(cat === 'All' ? 'Все' : (cat==='Phones'?'Смартфоны':(cat==='Laptops'?'Ноутбуки':(cat==='Audio'?'Наушники':(cat==='Accessories'?'Аксессуары':'')))))) {
@@ -1671,7 +1695,7 @@
                 price: parseFloat(document.getElementById('aPrice').value),
                 description: document.getElementById('aDesc').value, 
                 category: cat, images: uploadedImages, sizes: sizes,
-                isAvailable: 1, sizeChart: document.getElementById('aSizeChartText').value
+                isAvailable: true, sizeChart: document.getElementById('aSizeChartText').value
             };
 
             if (editMode) {
@@ -1681,29 +1705,6 @@
             saveProduct(prod);
         });
 
-        // Экспорт всех ключевых функций в глобальную область видимости (window) во избежание ReferenceError
-        window.deleteProduct = deleteProduct;
-        window.editProduct = editProduct;
-        window.toggleStock = toggleStock;
-        window.toggleSizeStock = toggleSizeStock;
-        window.toggleSizeChart = toggleSizeChart;
-        window.closeProduct = closeProduct;
-        window.updateQty = updateQty;
-        window.openFeedbackModal = openFeedbackModal;
-        window.closeFeedbackModal = closeFeedbackModal;
-        window.submitFeedback = submitFeedback;
-        window.selectSize = selectSize;
-        window.addToCart = addToCart;
-        window.updateCartQty = updateCartQty;
-        window.removeFromCart = removeFromCart;
-        window.sendOrder = sendOrder;
-        window.toggleCheckoutModal = toggleCheckoutModal;
-        window.submitOrder = submitOrder;
-        window.closeSuccessModal = closeSuccessModal;
-        window.filter = filter;
-        window.closeAdmin = closeAdmin;
-        window.cancelEdit = cancelEdit;
-        
         document.addEventListener('DOMContentLoaded', () => {
             if (tg) {
                 try {
@@ -1763,7 +1764,6 @@
                 }
             };
             searchInput.addEventListener('input', handleSearchOrAdmin);
-            searchInput.addEventListener('keyup', handleSearchOrAdmin);
 
             populateOptionsForm(null);
             loadCartFromStorage();
