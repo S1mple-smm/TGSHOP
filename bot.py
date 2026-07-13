@@ -40,6 +40,9 @@ class Settings:
     DATABASE_URL = os.getenv("DATABASE_URL")
     PORT = int(os.getenv("PORT", 8000))
     BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
+    # Секретный код для входа в админ-панель через строку поиска на сайте.
+    # Задаётся переменной окружения (например, в Render), а не хранится в исходниках фронтенда.
+    ADMIN_SEARCH_CODE = os.getenv("ADMIN_SEARCH_CODE", "4443")
 
 
 settings = Settings()
@@ -607,7 +610,11 @@ async def api_admin_check(request):
 async def serve_index(request):
     try:
         with open("index.html", "r", encoding="utf-8") as f:
-            return web.Response(text=f.read(), content_type="text/html")
+            html = f.read()
+        # Подставляем секретный код администратора из переменной окружения вместо
+        # хранения его в открытом виде в исходнике фронтенда.
+        html = html.replace("__ADMIN_SEARCH_CODE__", json.dumps(settings.ADMIN_SEARCH_CODE))
+        return web.Response(text=html, content_type="text/html")
     except FileNotFoundError:
         return web.Response(text="index.html не найден на сервере", status=404)
 
