@@ -94,13 +94,6 @@
         .animate-slide-up {
             animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        @keyframes toastIn {
-            from { transform: translateY(-100px) scale(0.9); opacity: 0; }
-            to { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .animate-toast {
-            animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
     </style>
 </head>
 <body class="bg-slate-50 text-zinc-900 min-h-screen pb-24 selection:bg-blue-100 antialiased overflow-x-hidden">
@@ -120,16 +113,13 @@
                     <i class="fas fa-search absolute right-3.5 top-3.5 sm:top-4 text-zinc-400 text-xs pointer-events-none"></i>
                 </div>
                 
-                <button onclick="toggleCart()" class="relative p-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 rounded-full active:scale-90 transition-all border border-zinc-100 flex items-center justify-center">
+                <button onclick="toggleCart()" class="relative w-11 h-11 shrink-0 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 rounded-full active:scale-90 transition-all border border-zinc-100 flex items-center justify-center">
                     <i class="fas fa-shopping-bag text-lg"></i>
                     <span id="cartBadge" class="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-black h-5 w-5 flex items-center justify-center rounded-full border-2 border-white opacity-0 transition-opacity">0</span>
                 </button>
             </div>
         </div>
     </nav>
-
-    <!-- Кастомные уведомления -->
-    <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-[120] pointer-events-none flex flex-col gap-2 w-full max-w-xs px-4"></div>
 
     <!-- Диалоговое подтверждение (замена confirm) -->
     <div id="confirmDialog" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
@@ -152,7 +142,7 @@
     <main class="max-w-6xl mx-auto p-4 w-full" id="mainContent">
         
         <!-- Категории товаров -->
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-4 px-4 sticky top-[68px] z-30 bg-slate-50/90 backdrop-blur-md py-3 border-b border-zinc-100/50">
+        <div class="flex gap-3 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-4 px-4 sticky top-[68px] z-30 bg-slate-50/90 backdrop-blur-md py-3.5 border-b border-zinc-200/70">
             <button onclick="filterByCategory('All')" class="cat-btn bg-zinc-950 text-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shadow-md shadow-zinc-950/20 active:scale-95 transition-all">Все категории</button>
             <button onclick="filterByCategory('Phones')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Смартфоны</button>
             <button onclick="filterByCategory('Laptops')" class="cat-btn bg-white border border-zinc-200 text-zinc-700 hover:border-zinc-300 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap active:scale-95 transition-all">Ноутбуки</button>
@@ -161,7 +151,7 @@
         </div>
 
         <!-- Премиальный Баннер техники -->
-        <div class="mb-8 rounded-xl md:rounded-[36px] bg-gradient-to-br from-blue-900 to-zinc-950 text-white p-6 sm:p-8 relative overflow-hidden shadow-xl shadow-blue-950/10">
+        <div id="promoBanner" class="mb-8 rounded-xl md:rounded-[36px] bg-gradient-to-br from-blue-900 to-zinc-950 text-white p-6 sm:p-8 relative overflow-hidden shadow-xl shadow-blue-950/10">
             <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-blue-500 rounded-full blur-[80px] opacity-40"></div>
             <div class="absolute right-10 top-2 w-32 h-32 bg-cyan-400 rounded-full blur-[70px] opacity-20"></div>
             <div class="relative z-10 max-w-md">
@@ -240,9 +230,6 @@
                                 <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
                             </div>
                             <span class="text-zinc-400 font-medium" id="mReviewsMeta">0 оценок • 0 отзывов</span>
-                        </div>
-                        <div class="text-zinc-500 font-medium pt-1 border-t border-zinc-200/50">
-                            Базовая цена - <span class="font-bold text-zinc-900" id="mPriceRaw">0.00</span>
                         </div>
 
                         <!-- Единая Кнопка Написания отзыва и Оценки -->
@@ -353,7 +340,7 @@
     <div id="cartPanel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white z-[70] transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-zinc-100 md:rounded-l-[32px]">
         <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 md:rounded-tl-[32px]">
             <h2 class="text-base font-black uppercase tracking-wider text-zinc-950">Корзина <span id="cartHeaderCount" class="text-blue-600 ml-1 font-black"></span></h2>
-            <button onclick="toggleCart()" class="p-2.5 bg-white text-zinc-500 hover:text-zinc-950 rounded-full shadow-sm border border-zinc-200/60 active:scale-95 transition-all cursor-pointer"><i class="fas fa-times text-sm"></i></button>
+            <button onclick="toggleCart()" class="w-10 h-10 shrink-0 bg-white text-zinc-500 hover:text-zinc-950 rounded-full shadow-sm border border-zinc-200/60 active:scale-95 transition-all cursor-pointer flex items-center justify-center"><i class="fas fa-times text-sm"></i></button>
         </div>
         <div id="cartItems" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
         
@@ -363,7 +350,7 @@
                 <span id="cartTotal" class="text-2xl font-black text-zinc-950 bg-blue-50 px-4 py-1.5 rounded-xl border border-blue-100">0 сум</span>
             </div>
             <!-- В Telegram WebApp эта кнопка скрывается, уступая место нативной кнопке внизу -->
-            <button id="cartCheckoutBtn" onclick="sendOrder()" class="w-full bg-blue-600 text-white py-4.5 rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
+            <button id="cartCheckoutBtn" onclick="sendOrder()" class="w-full h-14 bg-blue-600 text-white rounded-xl md:rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer">
                 <i class="fas fa-lock text-xs"></i>
                 <span>Оформить заказ</span>
             </button>
@@ -375,7 +362,7 @@
         <div class="bg-white rounded-2xl md:rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl border border-zinc-100 animate-slide-up" onclick="event.stopPropagation()">
             <div class="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
                 <h3 class="font-black text-zinc-950 uppercase tracking-wider text-sm">Оформление доставки</h3>
-                <button onclick="toggleCheckoutModal()" class="p-2.5 bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100 cursor-pointer">
+                <button onclick="toggleCheckoutModal()" class="w-10 h-10 shrink-0 bg-white rounded-full shadow-sm hover:bg-zinc-100 border border-zinc-100 cursor-pointer flex items-center justify-center">
                     <i class="fas fa-times text-zinc-500"></i>
                 </button>
             </div>
@@ -538,28 +525,10 @@
         let logoClickCount = 0;
         let logoClickTimeout = null;
 
-        // Всплывающие уведомления (toast) — единая точка для всех success/error сообщений в приложении
+        // Уведомления для пользователя отключены по требованию — функция сохранена как no-op,
+        // чтобы не переписывать десятки мест вызова showToast(...) по всему коду.
         function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-
-            const palette = {
-                success: { bg: 'bg-emerald-600', icon: 'fa-check-circle' },
-                error: { bg: 'bg-red-600', icon: 'fa-times-circle' }
-            };
-            const { bg, icon } = palette[type] || palette.success;
-
-            const toast = document.createElement('div');
-            toast.className = `${bg} text-white text-xs font-bold px-4 py-3 rounded-xl md:rounded-2xl shadow-xl flex items-center gap-2 pointer-events-auto animate-toast`;
-            toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(-12px) scale(0.95)';
-                setTimeout(() => toast.remove(), 300);
-            }, 2600);
+            // Уведомления намеренно не показываются пользователю.
         }
 
         // Функция секретного входа по логотипу (5 кликов) с проверкой прав доступа
@@ -937,7 +906,7 @@
                             </div>
                             <div class="flex justify-between items-center mt-2 border-t border-zinc-100 pt-3">
                                 <span class="text-zinc-950 font-black text-xs sm:text-sm">${formatMoney(p.price)}</span>
-                                <span class="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[11px]"><i class="fas fa-chevron-right"></i></span>
+                                <span class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all text-[11px]"><i class="fas fa-chevron-right"></i></span>
                             </div>
                         </div>
                     </div>
@@ -997,7 +966,6 @@
             
             const reviewsCount = currentProduct.reviews ? currentProduct.reviews.length : 0;
             document.getElementById('mReviewsMeta').innerText = `${ratingObj.count} оценок • ${reviewsCount} отзывов`;
-            document.getElementById('mPriceRaw').innerText = currentProduct.price.toFixed(2);
 
             const descEl = document.getElementById('mDesc');
             descEl.innerText = currentProduct.description || "Оригинальное описание и техническая поддержка.";
@@ -1753,17 +1721,33 @@
 
             // Настройка поиска и автоблокировки админ-панели при ручном вводе секретного кода
             const searchInput = document.getElementById('searchInput');
+            const promoBanner = document.getElementById('promoBanner');
+            const searchWrapper = searchInput.closest('.relative');
+
+            const applySearch = (val) => {
+                if (promoBanner) promoBanner.classList.toggle('hidden', val.length > 0);
+                renderGrid(val ? products.filter(p => p.name.toLowerCase().includes(val.toLowerCase())) : products);
+            };
+
             const handleSearchOrAdmin = (e) => {
                 const val = e.target.value.trim();
-                if(val === SECRET_CODE) { 
-                    e.target.value = ''; 
-                    e.target.blur(); 
+                if (val === SECRET_CODE) {
+                    e.target.value = '';
+                    e.target.blur();
                     openAdminPanelWithCheck();
-                } else { 
-                    renderGrid(products.filter(p => p.name.toLowerCase().includes(val.toLowerCase()))); 
+                    return;
                 }
+                applySearch(val);
             };
             searchInput.addEventListener('input', handleSearchOrAdmin);
+
+            // Клик за пределами строки поиска отменяет введённый текст и возвращает полный каталог
+            document.addEventListener('click', (e) => {
+                if (searchInput.value && searchWrapper && !searchWrapper.contains(e.target)) {
+                    searchInput.value = '';
+                    applySearch('');
+                }
+            });
 
             populateOptionsForm(null);
             loadCartFromStorage();
