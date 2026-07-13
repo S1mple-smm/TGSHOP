@@ -17,8 +17,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
@@ -621,9 +619,15 @@ class OrderFlow(StatesGroup):
 
 
 def main_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))
-    ]])
+    # ВАЖНО: Telegram.WebApp.sendData() на фронтенде работает ТОЛЬКО если мини-приложение
+    # было открыто через кнопку клавиатуры (KeyboardButton.web_app), а не через инлайн-кнопку
+    # (InlineKeyboardButton.web_app). Раньше здесь использовалась инлайн-кнопка, из-за чего
+    # оформление заказа через мини-приложение в Telegram не работало: sendData() не мог
+    # передать данные боту, и сообщение с заказом никогда не приходило.
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
+        resize_keyboard=True,
+    )
 
 
 def contact_kb():
