@@ -100,15 +100,15 @@
 
     <!-- Навигация -->
     <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-zinc-100 px-4 py-3.5 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] transition-all">
-        <div class="max-w-6xl mx-auto w-full flex justify-between items-center">
+        <div class="max-w-6xl mx-auto w-full flex justify-between items-center gap-3">
             <!-- Секретный вход по 5 кликам на логотип для админа -->
-            <div class="font-black text-2xl tracking-tighter cursor-pointer flex items-center gap-2 text-zinc-950 active:scale-95 transition-transform" onclick="handleLogoClick()">
-                <span class="bg-gradient-to-r from-zinc-950 via-zinc-900 to-blue-600 bg-clip-text text-transparent">WEISI</span>
-                <span class="bg-blue-600 text-white text-[11px] font-extrabold tracking-widest uppercase px-2 py-1 rounded-md shadow-sm shadow-blue-200">TECH</span>
+            <div id="navLogo" class="font-black text-2xl tracking-tighter cursor-pointer flex items-center gap-2 text-zinc-950 active:scale-95 transition-all duration-300 overflow-hidden shrink-0" onclick="handleLogoClick()" style="max-width: 160px; opacity: 1;">
+                <span class="bg-gradient-to-r from-zinc-950 via-zinc-900 to-blue-600 bg-clip-text text-transparent whitespace-nowrap">WEISI</span>
+                <span class="bg-blue-600 text-white text-[11px] font-extrabold tracking-widest uppercase px-2 py-1 rounded-md shadow-sm shadow-blue-200 whitespace-nowrap">TECH</span>
             </div>
             
-            <div class="flex items-center gap-3 justify-end flex-1 max-w-md ml-4">
-                <div class="relative w-full max-w-[200px] sm:max-w-[280px]">
+            <div class="flex items-center gap-3 justify-end flex-1">
+                <div id="searchBarWrapper" class="relative w-full max-w-[200px] sm:max-w-[280px] transition-all duration-300">
                     <input type="text" id="searchInput" placeholder="Поиск девайсов..." class="bg-zinc-100/90 border border-transparent rounded-full py-2.5 sm:py-3 pl-4 pr-10 text-xs w-full focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-zinc-800 placeholder-zinc-400">
                     <i class="fas fa-search absolute right-3.5 top-3.5 sm:top-4 text-zinc-400 text-xs pointer-events-none"></i>
                 </div>
@@ -245,7 +245,7 @@
                     <div id="mPrice" class="text-2xl md:text-3xl font-black text-blue-600 mb-6 bg-blue-50/50 px-4 py-2 rounded-xl md:rounded-2xl w-max"></div>
 
                     <!-- Выбор конфигурации -->
-                    <div class="mb-6">
+                    <div class="mb-6" id="sizesSection">
                         <div class="flex justify-between items-center mb-3">
                             <label class="block text-[10px] font-black uppercase text-zinc-400 tracking-wider">Доступные Опции</label>
                             <span id="sizeHelper" class="text-xs text-zinc-400 font-semibold">Выберите нужную версию</span>
@@ -457,7 +457,7 @@
                                     </button>
                                 </div>
                                 <div id="optionsFormContainer" class="space-y-2 max-h-52 overflow-y-auto hide-scrollbar pr-1"></div>
-                                <p class="text-[9px] text-zinc-400 mt-2 font-medium">Введите название опции, остаток и индивидуальную цену (если оставить пустой, применится основная цена).</p>
+                                <p class="text-[9px] text-zinc-400 mt-2 font-medium">Введите название опции, остаток и индивидуальную цену (если оставить пустой, применится основная цена). Если не добавить ни одной опции — товар будет продаваться как есть, без вариантов, а наличие будет управляться переключателем «В НАЛИЧИИ».</p>
                             </div>
 
                             <div>
@@ -510,7 +510,10 @@
         let qty = 1;
         let uploadedImages = [];
         let productSwiper = null; 
-        const SECRET_CODE = "4443";
+        // Значение подставляется сервером (serve_index в bot.py) из переменной окружения
+        // ADMIN_SEARCH_CODE, а не хранится в открытом виде в исходнике фронтенда.
+        // typeof-проверка защищает от краха скрипта, если файл открыт напрямую, минуя сервер.
+        const SECRET_CODE = (typeof __ADMIN_SEARCH_CODE__ !== 'undefined') ? __ADMIN_SEARCH_CODE__ : "4443";
         let editMode = false;
         let editProductId = null;
         let originalSizes = null;
@@ -655,9 +658,8 @@
                     }
                     addOptionRow(key, stock, price);
                 });
-            } else {
-                addOptionRow('Стандарт', 10, '');
             }
+            // Иначе список остаётся пустым: товар можно сохранить без вариантов вообще.
         }
 
         // Загрузка девайсов напрямую со своего сервера
@@ -996,12 +998,15 @@
             });
 
             // Рендер ручных опций и остатка товара на складе
+            const sizesSection = document.getElementById('sizesSection');
             const sizesContainer = document.getElementById('mSizes');
             const sortedSizes = sortSizes(Object.keys(currentProduct.sizes || {}));
-            
+
             if (sortedSizes.length === 0) {
-                sizesContainer.innerHTML = `<span class="text-xs text-zinc-400">Нет доступных конфигураций</span>`;
+                // Товар без вариантов — блок выбора опций попросту не нужен
+                if (sizesSection) sizesSection.classList.add('hidden');
             } else {
+                if (sizesSection) sizesSection.classList.remove('hidden');
                 sizesContainer.innerHTML = sortedSizes.map(s => {
                     const rawStock = currentProduct.sizes[s];
                     let stock = 10;
@@ -1179,27 +1184,39 @@
 
         function addToCart() {
             const hasSizesAvailable = currentProduct.sizes && Object.keys(currentProduct.sizes).length > 0;
-            if(hasSizesAvailable && !selectedSize) { 
+
+            if (hasSizesAvailable && !selectedSize) {
                 try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
                 const sizeHelper = document.getElementById('sizeHelper');
                 sizeHelper.innerText = 'Пожалуйста, выберите модификацию!';
                 sizeHelper.className = 'text-xs text-red-500 font-bold animate-pulse';
-                return; 
+                return;
             }
-            
+
+            if (!hasSizesAvailable && !currentProduct.isAvailable) {
+                try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error'); } catch(e){}
+                showToast('Товар временно недоступен', 'error');
+                return;
+            }
+
             const targetSize = selectedSize ? selectedSize : 'Standard';
-            const availableStock = currentProduct.sizes[targetSize];
-            
-            let stockNumber = 10;
+            let stockNumber;
             let finalPrice = currentProduct.price;
 
-            if (availableStock !== null && typeof availableStock === 'object') {
-                stockNumber = parseInt(availableStock.stock) || 0;
-                if (availableStock.price !== null && availableStock.price !== undefined) {
-                    finalPrice = parseFloat(availableStock.price);
+            if (hasSizesAvailable) {
+                const availableStock = currentProduct.sizes[targetSize];
+                if (availableStock !== null && typeof availableStock === 'object') {
+                    stockNumber = parseInt(availableStock.stock) || 0;
+                    if (availableStock.price !== null && availableStock.price !== undefined) {
+                        finalPrice = parseFloat(availableStock.price);
+                    }
+                } else {
+                    stockNumber = (typeof availableStock === 'boolean') ? (availableStock ? 10 : 0) : (parseInt(availableStock) || 0);
                 }
             } else {
-                stockNumber = (typeof availableStock === 'boolean') ? (availableStock ? 10 : 0) : (parseInt(availableStock) || 0);
+                // Товар без вариантов — остаток по опциям не отслеживается,
+                // доступность полностью определяется переключателем "В НАЛИЧИИ".
+                stockNumber = Infinity;
             }
 
             if (qty > stockNumber) {
@@ -1235,12 +1252,19 @@
                 cart.splice(idx, 1);
                 showToast('Товар удален из корзины', 'success');
             } else {
-                const availableStock = item.sizes[item.selectedSize];
-                let stockNumber = 10;
-                if (availableStock !== null && typeof availableStock === 'object') {
-                    stockNumber = parseInt(availableStock.stock) || 0;
+                const hasSizesAvailable = item.sizes && Object.keys(item.sizes).length > 0;
+                let stockNumber;
+
+                if (hasSizesAvailable) {
+                    const availableStock = item.sizes[item.selectedSize];
+                    if (availableStock !== null && typeof availableStock === 'object') {
+                        stockNumber = parseInt(availableStock.stock) || 0;
+                    } else {
+                        stockNumber = (typeof availableStock === 'boolean') ? (availableStock ? 10 : 0) : (parseInt(availableStock) || 0);
+                    }
                 } else {
-                    stockNumber = (typeof availableStock === 'boolean') ? (availableStock ? 10 : 0) : (parseInt(availableStock) || 0);
+                    // Товар без вариантов — остаток по опциям не отслеживается
+                    stockNumber = Infinity;
                 }
 
                 if (newQty > stockNumber) {
@@ -1311,7 +1335,9 @@
                                     <h4 class="font-extrabold text-xs text-zinc-950 truncate mr-2">${i.name}</h4>
                                     <button onclick="removeFromCart(${idx})" class="text-gray-400 p-1 hover:text-red-500 transition-colors cursor-pointer"><i class="fas fa-trash-alt text-[11px]"></i></button>
                                 </div>
+                                ${i.selectedSize && i.selectedSize !== 'Standard' ? `
                                 <p class="text-[10px] text-zinc-400 font-bold mt-0.5">Опция: <span class="text-zinc-800 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-md ml-1 text-[9px] font-black">${i.selectedSize}</span></p>
+                                ` : ''}
                             </div>
                             <div class="flex justify-between items-end mt-1.5">
                                 <span class="text-blue-600 font-black text-xs">${formatMoney((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1))}</span>
@@ -1358,30 +1384,18 @@
         }
 
         function sendOrder() {
-            if(cart.length === 0) {
+            if (cart.length === 0) {
                 showToast("Ваша корзина пока пуста!", "error");
                 return;
             }
-            if (isTelegram && tg) {
-                const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
-                const data = { 
-                    total_price: total, 
-                    items: cart.map(i => ({ 
-                        name: i.name, 
-                        price: parseFloat(i.price) || 0, 
-                        qty: parseInt(i.qty) || 1, 
-                        size: i.selectedSize 
-                    })) 
-                };
-                try {
-                    tg.sendData(JSON.stringify(data));
-                } catch (e) {
-                    console.error("sendData ошибка, переход к резервной модалке", e);
-                    toggleCheckoutModal();
-                }
-            } else {
-                toggleCheckoutModal();
-            }
+            // ВАЖНО: Telegram.WebApp.sendData() работает ТОЛЬКО если мини-приложение было
+            // открыто через кнопку клавиатуры (KeyboardButton.web_app). Приложения, открытые
+            // через кнопку меню (иконку рядом со строкой ввода) или инлайн-кнопку, ведут себя
+            // одинаково — sendData для них недоступен (подтверждено официальной документацией
+            // Telegram). Так как заранее неизвестно, каким способом пользователь открыл
+            // приложение, оформление заказа всегда идёт через нашу же REST-ручку /api/orders —
+            // она уже проверенно работает и не зависит от способа запуска мини-приложения.
+            toggleCheckoutModal();
         }
 
         function toggleCheckoutModal() {
@@ -1652,10 +1666,7 @@
 
             const cat = document.getElementById('aCat').value;
             const sizes = getOptionsFromForm();
-            if (Object.keys(sizes).length === 0) {
-                showToast('Добавьте хотя бы одну опцию комплектации!', 'error');
-                return;
-            }
+            // Пустой sizes допустим: товар без опций продаётся как есть, единой позицией.
 
             const prod = {
                 id: editMode ? editProductId : 'p' + Date.now(), 
@@ -1675,14 +1686,16 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (tg) {
+                // Каждый вызов Telegram API изолирован в своём try/catch: сбой в одном
+                // (например, tg.ready() или tg.expand()) раньше мог тихо помешать регистрации
+                // обработчика клика по MainButton, из-за чего кнопка "ЗАКАЗАТЬ" переставала работать.
+                try { tg.ready(); } catch (e) { console.error("Ошибка tg.ready():", e); }
+                try { tg.expand(); } catch (e) { console.error("Ошибка tg.expand():", e); }
                 try {
-                    tg.ready();  // Оповещаем ТГ о готовности интерфейса
-                    tg.expand(); // Расширяем окно мини-аппа на максимум
-                    
                     // Регистрация нативного события клика по синей кнопке внизу Telegram
-                    tg.onEvent('mainButtonClicked', sendOrder);
-                } catch(e) {
-                    console.error("Ошибка при инициализации API Telegram:", e);
+                    tg.MainButton.onClick(sendOrder);
+                } catch (e) {
+                    console.error("Ошибка регистрации обработчика MainButton:", e);
                 }
             }
 
@@ -1722,8 +1735,30 @@
             // Настройка поиска и автоблокировки админ-панели при ручном вводе секретного кода
             const searchInput = document.getElementById('searchInput');
             const promoBanner = document.getElementById('promoBanner');
-            const searchWrapper = searchInput.closest('.relative');
+            const navLogo = document.getElementById('navLogo');
+            const searchWrapper = document.getElementById('searchBarWrapper');
 
+            // Разворачивает строку поиска на всю ширину шапки, скрывая логотип,
+            // и наоборот — сворачивает обратно, когда поиск не активен.
+            const setSearchExpanded = (expanded) => {
+                if (!navLogo || !searchWrapper) return;
+                if (expanded) {
+                    navLogo.style.maxWidth = '0px';
+                    navLogo.style.opacity = '0';
+                    navLogo.style.marginRight = '0px';
+                    navLogo.style.pointerEvents = 'none';
+                    searchWrapper.classList.add('max-w-none');
+                    searchWrapper.classList.remove('max-w-[200px]', 'sm:max-w-[280px]');
+                } else {
+                    navLogo.style.maxWidth = '160px';
+                    navLogo.style.opacity = '1';
+                    navLogo.style.pointerEvents = 'auto';
+                    searchWrapper.classList.remove('max-w-none');
+                    searchWrapper.classList.add('max-w-[200px]', 'sm:max-w-[280px]');
+                }
+            };
+
+            // Прячет баннер со слоганом, пока идёт поиск, и возвращает его, когда строка пуста
             const applySearch = (val) => {
                 if (promoBanner) promoBanner.classList.toggle('hidden', val.length > 0);
                 renderGrid(val ? products.filter(p => p.name.toLowerCase().includes(val.toLowerCase())) : products);
@@ -1734,6 +1769,7 @@
                 if (val === SECRET_CODE) {
                     e.target.value = '';
                     e.target.blur();
+                    setSearchExpanded(false);
                     openAdminPanelWithCheck();
                     return;
                 }
@@ -1741,12 +1777,12 @@
             };
             searchInput.addEventListener('input', handleSearchOrAdmin);
 
-            // Клик за пределами строки поиска отменяет введённый текст и возвращает полный каталог
-            document.addEventListener('click', (e) => {
-                if (searchInput.value && searchWrapper && !searchWrapper.contains(e.target)) {
-                    searchInput.value = '';
-                    applySearch('');
-                }
+            // Разворачиваем строку поиска при фокусе; сворачиваем обратно при потере фокуса,
+            // но только если поле пустое — введённый текст (и результаты поиска) не сбрасываются
+            // при клике за пределами строки поиска.
+            searchInput.addEventListener('focus', () => setSearchExpanded(true));
+            searchInput.addEventListener('blur', () => {
+                if (!searchInput.value) setSearchExpanded(false);
             });
 
             populateOptionsForm(null);
