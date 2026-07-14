@@ -10,13 +10,16 @@ from datetime import datetime
 from aiohttp import web
 from dotenv import load_dotenv
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
@@ -56,6 +59,18 @@ if not settings.BOT_TOKEN:
 
 # Глобальный экземпляр бота используется и в поллинге, и в веб-обработчиках API
 bot = Bot(token=settings.BOT_TOKEN)
+
+# Общее хранилище FSM: используется и диспетчером бота (для входящих сообщений),
+# и REST-обработчиком /api/webapp_order — это позволяет запустить чат-флоу оформления
+# заказа (шаг с телефоном/адресом) из веб-запроса, а затем продолжить его как обычно,
+# когда пользователь ответит боту следующими сообщениями.
+fsm_storage = MemoryStorage()
+
+
+def get_order_fsm(user_id: int) -> FSMContext:
+    """FSMContext для личного чата с пользователем (chat_id == user_id в приватных чатах)."""
+    key = StorageKey(bot_id=bot.id, chat_id=user_id, user_id=user_id)
+    return FSMContext(storage=fsm_storage, key=key)
 
 
 # --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
@@ -626,18 +641,15 @@ class OrderFlow(StatesGroup):
 
 
 def main_kb():
-    # ВАЖНО (подтверждено официальной документацией Telegram, core.telegram.org/bots/webapps):
-    # Telegram.WebApp.sendData() работает ТОЛЬКО если мини-приложение запущено через кнопку
-    # клавиатуры (KeyboardButton.web_app). Как следствие, initData (Telegram ID, имя, username)
-    # при таком запуске будет ПУСТ — это взаимоисключающие требования платформы, а не
-    # ограничение нашего кода. Так как оформление заказа через MainButton намеренно использует
-    # именно sendData() и чат-флоу с ботом (см. sendOrder() на фронтенде и on_webapp_data ниже),
-    # здесь используется кнопка клавиатуры. Побочный эффект: проверка админа, автозаполнение
-    # имени и привязка заказа к user_id, завязанные на initData, работать не будут.
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
-        resize_keyboard=True,
-    )
+    # Инлайн-кнопка (а не кнопка клавиатуры) — специально, чтобы initData (Telegram ID, имя,
+    # username) оставался доступен внутри мини-приложения: на нём завязаны проверка админа,
+    # автозаполнение имени и привязка заказа к правильному пользователю. Оформление заказа
+    # через MainButton теперь идёт не через sendData(), а через нашу же REST-ручку
+    # /api/webapp_order (см. sendOrder() на фронтенде и api_webapp_order ниже), которая
+    # напрямую запускает тот же чат-флоу (телефон → адрес), не требуя кнопки клавиатуры.
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))
+    ]])
 
 
 def contact_kb():
@@ -683,27 +695,40 @@ async def cmd_orders(m: Message):
     await m.answer(text, parse_mode=ParseMode.HTML)
 
 
-async def on_webapp_data(m: Message, state: FSMContext):
+async def api_webapp_order(request):
+    """
+    Вызывается фронтендом при клике на MainButton внутри Telegram (см. sendOrder()).
+    Запускает тот же чат-флоу оформления заказа (телефон → адрес), что раньше запускался
+    через sendData()/on_webapp_data — но напрямую, через обычный bot.send_message, используя
+    Telegram ID пользователя из initData. Не требует кнопки клавиатуры и не зависит от
+    query_id/answerWebAppQuery.
+    """
     try:
-        data = json.loads(m.web_app_data.data)
+        data = await request.json()
+        user_id = int(data.get("user_id", 0))
         items = data.get("items", [])
         total = data.get("total_price", 0)
 
+        if not user_id:
+            return web.json_response({"status": "error", "msg": "Не удалось определить пользователя Telegram"}, status=400)
+
+        state = get_order_fsm(user_id)
         await state.update_data(items=items, total=total)
         await state.set_state(OrderFlow.contact)
 
         text = "📝 <b>Ваша корзина:</b>\n\n"
         for i in items:
-            size_info = f"({i['size']})" if i["size"] and i["size"] != "Standard" else ""
+            size_info = f"({i['size']})" if i.get("size") and i.get("size") != "Standard" else ""
             text += f"▪️ {i['name']} {size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
 
         text += f"\n💳 <b>Итого: {total:,.0f} UZS</b>"
         text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона."
 
-        await m.answer(text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
+        await bot.send_message(user_id, text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
+        return web.json_response({"status": "ok"})
     except Exception as e:
-        log.error(f"Ошибка разбора данных из WebApp: {e}")
-        await m.answer("❌ Ошибка данных. Попробуйте снова.")
+        log.error(f"Ошибка запуска чат-флоу заказа из мини-приложения: {e}")
+        return web.json_response({"status": "error", "msg": str(e)}, status=500)
 
 
 async def process_contact(m: Message, state: FSMContext):
@@ -778,17 +803,17 @@ async def main():
     app.router.add_post("/api/products/feedback", api_save_feedback)
     app.router.add_post("/api/orders", api_create_order)
     app.router.add_post("/api/admin_check", api_admin_check)
+    app.router.add_post("/api/webapp_order", api_webapp_order)
 
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", settings.PORT).start()
     log.info(f"🌐 Веб-сервер запущен на порту {settings.PORT}")
 
-    dp = Dispatcher(storage=MemoryStorage())
+    dp = Dispatcher(storage=fsm_storage)
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(cmd_help, Command("help"))
     dp.message.register(cmd_orders, Command("orders"))
-    dp.message.register(on_webapp_data, F.web_app_data)
     dp.message.register(process_contact, OrderFlow.contact)
     dp.message.register(process_finish, OrderFlow.address)
 
