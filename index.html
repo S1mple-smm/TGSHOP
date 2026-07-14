@@ -1383,18 +1383,23 @@
             showToast('Товар удален из корзины', 'success');
         }
 
-        function sendOrder() {
+        async function sendOrder() {
             if (cart.length === 0) {
                 showToast("Ваша корзина пока пуста!", "error");
                 return;
             }
-            // Внутри Telegram оформление идёт через нативный чат-флоу бота (sendData +
-            // запрос телефона/адреса сообщениями). Это требует запуска мини-приложения через
-            // кнопку клавиатуры — в этом режиме initData (Telegram ID, имя) недоступен,
-            // это ограничение платформы, а не нашего кода. Вне Telegram — обычная веб-форма.
-            if (isTelegram && tg) {
+            // Внутри Telegram оформление идёт через тот же чат-флоу бота (запрос телефона,
+            // затем адреса, обычными сообщениями), но запускается через нашу REST-ручку
+            // /api/webapp_order, а не через tg.sendData(). Это позволяет держать
+            // мини-приложение на инлайн-кнопке, при которой initData (Telegram ID, имя)
+            // остаётся доступен — проверка админа и автозаполнение имени продолжают работать.
+            // Вне Telegram (или если ID недоступен) — обычная веб-форма.
+            const userId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id : null;
+
+            if (isTelegram && tg && userId) {
                 const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
-                const data = {
+                const payload = {
+                    user_id: userId,
                     total_price: total,
                     items: cart.map(i => ({
                         name: i.name,
@@ -1404,9 +1409,17 @@
                     }))
                 };
                 try {
-                    tg.sendData(JSON.stringify(data));
+                    const res = await fetch('/api/webapp_order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Ошибка запроса к /api/webapp_order');
+                    // Бот уже написал в чат с просьбой прислать телефон — закрываем мини-приложение,
+                    // чтобы пользователь мог сразу ответить сообщением.
+                    try { tg.close(); } catch (e) {}
                 } catch (e) {
-                    console.error("sendData ошибка, переход к резервной модалке", e);
+                    console.error("Не удалось запустить чат-флоу заказа, переход к резервной модалке", e);
                     toggleCheckoutModal();
                 }
             } else {
