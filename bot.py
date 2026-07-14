@@ -10,13 +10,16 @@ from datetime import datetime
 from aiohttp import web
 from dotenv import load_dotenv
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
+    KeyboardButton,
     Message,
+    ReplyKeyboardMarkup,
     WebAppInfo,
 )
 
@@ -617,20 +620,43 @@ async def serve_index(request):
 
 
 # --- 4. ТЕЛЕГРАМ БОТ ---
+class OrderFlow(StatesGroup):
+    contact = State()
+    address = State()
+
+
 def main_kb():
     # ВАЖНО (подтверждено официальной документацией Telegram, core.telegram.org/bots/webapps):
-    # initData (Telegram ID, имя, username пользователя) ПУСТ, если мини-приложение запущено
-    # через кнопку клавиатуры (KeyboardButton.web_app) — а именно на initData у нас завязаны
-    # проверка админа, автозаполнение имени и привязка заказа к правильному user_id.
-    # sendData(), наоборот, работает ТОЛЬКО при запуске через кнопку клавиатуры.
-    # Это взаимоисключающие требования платформы Telegram, а не ограничение нашего кода —
-    # получить оба варианта одновременно от одной кнопки невозможно.
-    # Так как оформление заказа теперь всегда идёт через нашу REST-ручку /api/orders
-    # (см. sendOrder() на фронтенде) и больше не зависит от sendData(), используем именно
-    # инлайн-кнопку — это возвращает initData и всё, что на нём завязано.
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))
-    ]])
+    # Telegram.WebApp.sendData() работает ТОЛЬКО если мини-приложение запущено через кнопку
+    # клавиатуры (KeyboardButton.web_app). Как следствие, initData (Telegram ID, имя, username)
+    # при таком запуске будет ПУСТ — это взаимоисключающие требования платформы, а не
+    # ограничение нашего кода. Так как оформление заказа через MainButton намеренно использует
+    # именно sendData() и чат-флоу с ботом (см. sendOrder() на фронтенде и on_webapp_data ниже),
+    # здесь используется кнопка клавиатуры. Побочный эффект: проверка админа, автозаполнение
+    # имени и привязка заказа к user_id, завязанные на initData, работать не будут.
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🛒 Открыть магазин", web_app=WebAppInfo(url=f"{settings.BASE_URL}/"))]],
+        resize_keyboard=True,
+    )
+
+
+def contact_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Отправить мой номер", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def location_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📍 Отправить геолокацию", request_location=True)],
+            [KeyboardButton(text="⏩ Пропустить (введу вручную)")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
 
 
 async def cmd_start(m: Message):
@@ -657,6 +683,90 @@ async def cmd_orders(m: Message):
     await m.answer(text, parse_mode=ParseMode.HTML)
 
 
+async def on_webapp_data(m: Message, state: FSMContext):
+    try:
+        data = json.loads(m.web_app_data.data)
+        items = data.get("items", [])
+        total = data.get("total_price", 0)
+
+        await state.update_data(items=items, total=total)
+        await state.set_state(OrderFlow.contact)
+
+        text = "📝 <b>Ваша корзина:</b>\n\n"
+        for i in items:
+            size_info = f"({i['size']})" if i["size"] and i["size"] != "Standard" else ""
+            text += f"▪️ {i['name']} {size_info}\n   └ {i['qty']} шт. x {i['price']:,.0f} UZS\n"
+
+        text += f"\n💳 <b>Итого: {total:,.0f} UZS</b>"
+        text += "\n\n📞 <b>Шаг 1/2:</b> Отправьте ваш номер телефона."
+
+        await m.answer(text, reply_markup=contact_kb(), parse_mode=ParseMode.HTML)
+    except Exception as e:
+        log.error(f"Ошибка разбора данных из WebApp: {e}")
+        await m.answer("❌ Ошибка данных. Попробуйте снова.")
+
+
+async def process_contact(m: Message, state: FSMContext):
+    phone = m.contact.phone_number if m.contact else m.text
+    await state.update_data(phone=phone, name=m.from_user.full_name)
+    await state.set_state(OrderFlow.address)
+
+    await m.answer(
+        "📍 <b>Шаг 2/2:</b> Куда доставить заказ?\n\nНажмите <b>«Отправить геолокацию»</b> или напишите адрес текстом.",
+        reply_markup=location_kb(),
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def process_finish(m: Message, state: FSMContext):
+    data = await state.get_data()
+
+    if m.location:
+        addr_text = "📍 Геолокация (см. карту)"
+        lat, lon = m.location.latitude, m.location.longitude
+        maps_link = f"https://maps.google.com/?q={lat},{lon}"
+    else:
+        addr_text = f"🏠 {m.text}"
+        lat = lon = maps_link = None
+
+    order_id = await run_db(db.add_order, m.from_user.id, data["name"], data["phone"], addr_text, data["items"], data["total"])
+
+    receipt = (
+        f"✅ <b>Заказ №{order_id} успешно оформлен!</b>\n"
+        "──────────────────\n"
+        f"👤 <b>Заказчик:</b> {data['name']}\n"
+        f"📞 <b>Телефон:</b> {data['phone']}\n"
+        f"🚚 <b>Доставка:</b> {addr_text}\n"
+        "──────────────────\n"
+        f"💰 <b>К ОПЛАТЕ: {data['total']:,.0f} UZS</b>\n\n"
+        "<i>Менеджер свяжется с вами в ближайшее время.</i>"
+    )
+    await m.answer(receipt, reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+
+    if settings.ADMIN_ID:
+        try:
+            admin_msg = (
+                f"🆕 <b>НОВЫЙ ЗАКАЗ №{order_id}</b>\n"
+                f"👤 Клиент: <a href='tg://user?id={m.from_user.id}'>{data['name']}</a>\n"
+                f"📞 Тел: <code>{data['phone']}</code>\n"
+                f"📍 Адрес: {addr_text}\n"
+                f"🔗 Карты: {maps_link if maps_link else 'Нет'}\n\n"
+                "📦 <b>Состав:</b>\n"
+            )
+            for i in data["items"]:
+                size_info = f"({i['size']})" if i["size"] and i["size"] != "Standard" else ""
+                admin_msg += f"- {i['name']} {size_info} x{i['qty']}\n"
+            admin_msg += f"\n💰 <b>Сумма: {data['total']:,.0f} UZS</b>"
+
+            await m.bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
+            if lat and lon:
+                await m.bot.send_location(settings.ADMIN_ID, latitude=lat, longitude=lon)
+        except Exception as e:
+            log.error(f"Ошибка уведомления админа: {e}")
+
+    await state.clear()
+
+
 async def main():
     app = web.Application(client_max_size=1024 ** 2 * 20)
     app.router.add_get("/", serve_index)
@@ -674,10 +784,13 @@ async def main():
     await web.TCPSite(runner, "0.0.0.0", settings.PORT).start()
     log.info(f"🌐 Веб-сервер запущен на порту {settings.PORT}")
 
-    dp = Dispatcher()
+    dp = Dispatcher(storage=MemoryStorage())
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(cmd_help, Command("help"))
     dp.message.register(cmd_orders, Command("orders"))
+    dp.message.register(on_webapp_data, F.web_app_data)
+    dp.message.register(process_contact, OrderFlow.contact)
+    dp.message.register(process_finish, OrderFlow.address)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
