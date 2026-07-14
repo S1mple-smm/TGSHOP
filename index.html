@@ -1388,14 +1388,30 @@
                 showToast("Ваша корзина пока пуста!", "error");
                 return;
             }
-            // ВАЖНО: Telegram.WebApp.sendData() работает ТОЛЬКО если мини-приложение было
-            // открыто через кнопку клавиатуры (KeyboardButton.web_app). Приложения, открытые
-            // через кнопку меню (иконку рядом со строкой ввода) или инлайн-кнопку, ведут себя
-            // одинаково — sendData для них недоступен (подтверждено официальной документацией
-            // Telegram). Так как заранее неизвестно, каким способом пользователь открыл
-            // приложение, оформление заказа всегда идёт через нашу же REST-ручку /api/orders —
-            // она уже проверенно работает и не зависит от способа запуска мини-приложения.
-            toggleCheckoutModal();
+            // Внутри Telegram оформление идёт через нативный чат-флоу бота (sendData +
+            // запрос телефона/адреса сообщениями). Это требует запуска мини-приложения через
+            // кнопку клавиатуры — в этом режиме initData (Telegram ID, имя) недоступен,
+            // это ограничение платформы, а не нашего кода. Вне Telegram — обычная веб-форма.
+            if (isTelegram && tg) {
+                const total = cart.reduce((s, i) => s + ((parseFloat(i.price) || 0) * (parseInt(i.qty) || 1)), 0);
+                const data = {
+                    total_price: total,
+                    items: cart.map(i => ({
+                        name: i.name,
+                        price: parseFloat(i.price) || 0,
+                        qty: parseInt(i.qty) || 1,
+                        size: i.selectedSize
+                    }))
+                };
+                try {
+                    tg.sendData(JSON.stringify(data));
+                } catch (e) {
+                    console.error("sendData ошибка, переход к резервной модалке", e);
+                    toggleCheckoutModal();
+                }
+            } else {
+                toggleCheckoutModal();
+            }
         }
 
         function toggleCheckoutModal() {
