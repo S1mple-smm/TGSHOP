@@ -1814,6 +1814,15 @@
                 if (!searchInput.value) setSearchExpanded(false);
             });
 
+            // Клик за пределами строки поиска завершает набор текста (снимает фокус,
+            // убирает клавиатуру на мобильных), но не очищает введённый запрос и не
+            // сбрасывает уже отфильтрованные результаты поиска.
+            document.addEventListener('click', (e) => {
+                if (document.activeElement === searchInput && searchWrapper && !searchWrapper.contains(e.target)) {
+                    searchInput.blur();
+                }
+            });
+
             populateOptionsForm(null);
             loadCartFromStorage();
             loadProducts();
