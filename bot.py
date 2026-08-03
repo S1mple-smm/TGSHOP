@@ -10,7 +10,7 @@ from datetime import datetime
 from aiohttp import web
 from dotenv import load_dotenv
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -18,6 +18,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
+    CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
@@ -71,6 +72,18 @@ def get_order_fsm(user_id: int) -> FSMContext:
     """FSMContext для личного чата с пользователем (chat_id == user_id в приватных чатах)."""
     key = StorageKey(bot_id=bot.id, chat_id=user_id, user_id=user_id)
     return FSMContext(storage=fsm_storage, key=key)
+
+
+# Прямая переписка админа с покупателем по конкретному заказу (см. кнопку "Написать клиенту").
+# Хранится в памяти процесса — сбрасывается при перезапуске, как и fsm_storage выше.
+admin_relay_target = {"user_id": None, "order_id": None}
+# Покупатели, чьи сообщения сейчас пересылаются админу (может быть несколько одновременно,
+# даже если "в фокусе" у админа сейчас только один из них).
+active_relay_users = set()
+
+
+def _is_admin_user(user_id) -> bool:
+    return bool(settings.ADMIN_ID) and str(user_id) == settings.ADMIN_ID
 
 
 # --- 2. МЕНЕДЖЕР БАЗЫ ДАННЫХ ---
@@ -205,6 +218,19 @@ class DBManager:
                             cur.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_def}")
                 except Exception as e:
                     log.warning(f"Не удалось добавить колонку {col_name} (возможно, уже есть): {e}")
+            conn.commit()
+
+            # Статус заказа (new/completed) — нужен для кнопки "Завершить заказ" в чате админа
+            try:
+                if self.is_pg:
+                    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'new'")
+                else:
+                    cur.execute("PRAGMA table_info(orders)")
+                    existing_order_cols = [row[1] for row in cur.fetchall()]
+                    if "status" not in existing_order_cols:
+                        cur.execute("ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'new'")
+            except Exception as e:
+                log.warning(f"Не удалось добавить колонку status в orders (возможно, уже есть): {e}")
             conn.commit()
 
             # Наполнение витрины дефолтными товарами при первом запуске
@@ -483,6 +509,32 @@ class DBManager:
             conn.commit()
             return order_id
 
+    def get_order(self, order_id):
+        with self._connection() as conn:
+            cur = conn.cursor()
+            if self.is_pg:
+                cur.execute("SELECT * FROM orders WHERE id=%s", (order_id,))
+            else:
+                cur.execute("SELECT * FROM orders WHERE id=?", (order_id,))
+            r = cur.fetchone()
+            if not r:
+                return None
+            return {
+                "id": r["id"], "user_id": r["user_id"], "user_name": r["user_name"],
+                "phone": r["phone"], "address": r["address"],
+                "items": self._as_json(r["items"], []), "total": r["total"],
+                "status": r["status"] or "new", "created_at": r["created_at"],
+            }
+
+    def update_order_status(self, order_id, status):
+        with self._connection() as conn:
+            cur = conn.cursor()
+            if self.is_pg:
+                cur.execute("UPDATE orders SET status=%s WHERE id=%s", (status, order_id))
+            else:
+                cur.execute("UPDATE orders SET status=? WHERE id=?", (status, order_id))
+            conn.commit()
+
     def list_user_orders(self, uid, limit=5):
         with self._connection() as conn:
             cur = conn.cursor()
@@ -491,7 +543,7 @@ class DBManager:
             else:
                 cur.execute("SELECT * FROM orders WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit))
             rows = cur.fetchall()
-            return [{"id": r["id"], "total": r["total"], "created_at": r["created_at"]} for r in rows]
+            return [{"id": r["id"], "total": r["total"], "created_at": r["created_at"], "status": r["status"] or "new"} for r in rows]
 
 
 db = DBManager()
@@ -595,7 +647,7 @@ async def api_create_order(request):
             client_ref = f"<a href='tg://user?id={user_id}'>{name}</a>" if user_id > 0 else f"{name} (через Web)"
             admin_msg = _build_admin_order_message(order_id, client_ref, phone, address, items, total)
             try:
-                await bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
+                await bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML, reply_markup=order_edit_kb(order_id))
             except Exception as admin_err:
                 log.error(f"Не удалось отправить уведомление админу: {admin_err}")
 
@@ -671,6 +723,22 @@ def location_kb():
     )
 
 
+def order_edit_kb(order_id):
+    """Свёрнутое состояние: одна кнопка «Изменить» под сообщением о заказе у админа."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✏️ Изменить", callback_data=f"edit_order:{order_id}")
+    ]])
+
+
+def order_actions_kb(order_id):
+    """Развёрнутое состояние после «Изменить»: связаться с клиентом / завершить заказ."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Написать клиенту", callback_data=f"contact_order:{order_id}")],
+        [InlineKeyboardButton(text="✅ Завершить заказ", callback_data=f"complete_order:{order_id}")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"back_order:{order_id}")],
+    ])
+
+
 async def cmd_start(m: Message):
     await m.answer(
         f"👋 <b>Привет, {m.from_user.first_name}!</b>\n\nДобро пожаловать в WEISI TECH.\nНажмите кнопку ниже, чтобы открыть каталог 👇",
@@ -680,7 +748,7 @@ async def cmd_start(m: Message):
 
 
 async def cmd_help(m: Message):
-    await m.answer("Команды:\n/start - Главное меню\n/orders - История заказов")
+    await m.answer("Команды:\n/start - Главное меню\n/orders - История заказов\n/endchat - Завершить переписку с клиентом (для админа)")
 
 
 async def cmd_orders(m: Message):
@@ -689,10 +757,33 @@ async def cmd_orders(m: Message):
         await m.answer("📭 У вас пока нет заказов.")
         return
 
+    status_labels = {"new": "🕓 В обработке", "completed": "✅ Выполнен"}
     text = "📂 <b>История заказов:</b>\n\n"
     for o in orders:
-        text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n\n"
+        status_text = status_labels.get(o["status"], "🕓 В обработке")
+        text += f"🔹 <b>Заказ №{o['id']}</b>\n💰 {o['total']:,.0f} UZS\n📅 {o['created_at']}\n{status_text}\n\n"
     await m.answer(text, parse_mode=ParseMode.HTML)
+
+
+async def cmd_endchat(m: Message):
+    """Админ завершает текущую прямую переписку с покупателем."""
+    if not _is_admin_user(m.from_user.id):
+        return
+
+    target = admin_relay_target.get("user_id")
+    if not target:
+        await m.answer("Сейчас нет активной переписки с клиентом.")
+        return
+
+    active_relay_users.discard(target)
+    admin_relay_target["user_id"] = None
+    admin_relay_target["order_id"] = None
+
+    await m.answer("✅ Переписка завершена.")
+    try:
+        await bot.send_message(target, "Менеджер завершил переписку. Если появятся вопросы — напишите /start.")
+    except Exception as e:
+        log.error(f"Не удалось уведомить клиента о завершении переписки: {e}")
 
 
 async def api_webapp_order(request):
@@ -729,6 +820,94 @@ async def api_webapp_order(request):
     except Exception as e:
         log.error(f"Ошибка запуска чат-флоу заказа из мини-приложения: {e}")
         return web.json_response({"status": "error", "msg": str(e)}, status=500)
+
+
+async def cb_edit_order(call: CallbackQuery):
+    """Админ нажал «Изменить» под сообщением о заказе — показываем варианты действий."""
+    if not _is_admin_user(call.from_user.id):
+        await call.answer("Недостаточно прав", show_alert=True)
+        return
+    order_id = int(call.data.split(":")[1])
+    try:
+        await call.message.edit_reply_markup(reply_markup=order_actions_kb(order_id))
+    except Exception as e:
+        log.error(f"Не удалось показать варианты действий по заказу: {e}")
+    await call.answer()
+
+
+async def cb_back_order(call: CallbackQuery):
+    """Возврат к свёрнутой кнопке «Изменить»."""
+    if not _is_admin_user(call.from_user.id):
+        await call.answer("Недостаточно прав", show_alert=True)
+        return
+    order_id = int(call.data.split(":")[1])
+    try:
+        await call.message.edit_reply_markup(reply_markup=order_edit_kb(order_id))
+    except Exception as e:
+        log.error(f"Не удалось вернуться к кнопке «Изменить»: {e}")
+    await call.answer()
+
+
+async def cb_contact_order(call: CallbackQuery):
+    """Админ нажал «Написать клиенту» — включаем режим прямой переписки по этому заказу."""
+    if not _is_admin_user(call.from_user.id):
+        await call.answer("Недостаточно прав", show_alert=True)
+        return
+
+    order_id = int(call.data.split(":")[1])
+    order = await run_db(db.get_order, order_id)
+    if not order or not order.get("user_id"):
+        await call.answer(
+            "У этого заказа нет Telegram ID покупателя (оформлен через сайт) — написать напрямую через бота нельзя. "
+            "Свяжитесь по номеру телефона из заказа.",
+            show_alert=True,
+        )
+        return
+
+    customer_id = int(order["user_id"])
+    admin_relay_target["user_id"] = customer_id
+    admin_relay_target["order_id"] = order_id
+    active_relay_users.add(customer_id)
+
+    await call.answer("Режим переписки с клиентом включён")
+    await bot.send_message(
+        call.from_user.id,
+        f"💬 <b>Переписка по заказу №{order_id}</b> с {order['user_name']}.\n"
+        f"Просто напишите сообщение — оно уйдёт клиенту.\n"
+        f"Чтобы закончить переписку, отправьте /endchat",
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def cb_complete_order(call: CallbackQuery):
+    """Админ нажал «Завершить заказ» — помечаем заказ выполненным."""
+    if not _is_admin_user(call.from_user.id):
+        await call.answer("Недостаточно прав", show_alert=True)
+        return
+
+    order_id = int(call.data.split(":")[1])
+    await run_db(db.update_order_status, order_id, "completed")
+
+    # Если по этому заказу шла переписка — закрываем её, раз заказ уже выполнен
+    if admin_relay_target.get("order_id") == order_id:
+        active_relay_users.discard(admin_relay_target.get("user_id"))
+        admin_relay_target["user_id"] = None
+        admin_relay_target["order_id"] = None
+
+    order = await run_db(db.get_order, order_id)
+    if order:
+        client_ref = (
+            f"<a href='tg://user?id={order['user_id']}'>{order['user_name']}</a>"
+            if order.get("user_id") else f"{order['user_name']} (через Web)"
+        )
+        msg_text = _build_admin_order_message(order_id, client_ref, order["phone"], order["address"], order["items"], order["total"])
+        msg_text += "\n\n✅ <b>Заказ завершён</b>"
+        try:
+            await call.message.edit_text(msg_text, parse_mode=ParseMode.HTML, reply_markup=order_edit_kb(order_id))
+        except Exception as e:
+            log.error(f"Не удалось обновить сообщение о заказе: {e}")
+
+    await call.answer("Заказ отмечен как завершённый ✅")
 
 
 async def process_contact(m: Message, state: FSMContext):
@@ -783,13 +962,52 @@ async def process_finish(m: Message, state: FSMContext):
                 admin_msg += f"- {i['name']} {size_info} x{i['qty']}\n"
             admin_msg += f"\n💰 <b>Сумма: {data['total']:,.0f} UZS</b>"
 
-            await m.bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML)
+            await m.bot.send_message(settings.ADMIN_ID, admin_msg, parse_mode=ParseMode.HTML, reply_markup=order_edit_kb(order_id))
             if lat and lon:
                 await m.bot.send_location(settings.ADMIN_ID, latitude=lat, longitude=lon)
         except Exception as e:
             log.error(f"Ошибка уведомления админа: {e}")
 
     await state.clear()
+
+
+def _is_admin_relay_active(m: Message) -> bool:
+    """Сообщение админа, которое нужно переслать текущему клиенту (не команда)."""
+    if not _is_admin_user(m.from_user.id):
+        return False
+    if m.text and m.text.startswith("/"):
+        return False
+    return admin_relay_target.get("user_id") is not None
+
+
+def _is_customer_relay_active(m: Message) -> bool:
+    """Сообщение от покупателя, с которым сейчас идёт прямая переписка."""
+    return m.from_user.id in active_relay_users
+
+
+async def admin_relay_outgoing(m: Message):
+    """Пересылает сообщение админа покупателю, с которым сейчас открыта переписка."""
+    target = admin_relay_target.get("user_id")
+    try:
+        await bot.send_message(target, f"👨‍💼 <b>Менеджер:</b>\n{m.text}", parse_mode=ParseMode.HTML)
+        await m.answer("✅ Отправлено клиенту")
+    except Exception as e:
+        log.error(f"Не удалось переслать сообщение клиенту: {e}")
+        await m.answer("❌ Не удалось отправить сообщение клиенту.")
+
+
+async def customer_relay_incoming(m: Message):
+    """Пересылает сообщение покупателя админу, если по нему сейчас открыта переписка."""
+    order_id = admin_relay_target.get("order_id") if admin_relay_target.get("user_id") == m.from_user.id else None
+    label = f" (заказ №{order_id})" if order_id else ""
+    try:
+        await bot.send_message(
+            settings.ADMIN_ID,
+            f"👤 <b>{m.from_user.full_name}</b>{label}:\n{m.text or '[сообщение без текста]'}",
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception as e:
+        log.error(f"Не удалось переслать сообщение админу: {e}")
 
 
 async def main():
@@ -814,8 +1032,18 @@ async def main():
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(cmd_help, Command("help"))
     dp.message.register(cmd_orders, Command("orders"))
+    dp.message.register(cmd_endchat, Command("endchat"))
     dp.message.register(process_contact, OrderFlow.contact)
     dp.message.register(process_finish, OrderFlow.address)
+    # Пересылка сообщений (переписка админ ↔ покупатель) — регистрируются последними,
+    # чтобы команды и шаги оформления заказа выше всегда имели приоритет.
+    dp.message.register(admin_relay_outgoing, _is_admin_relay_active)
+    dp.message.register(customer_relay_incoming, _is_customer_relay_active)
+
+    dp.callback_query.register(cb_edit_order, F.data.startswith("edit_order:"))
+    dp.callback_query.register(cb_back_order, F.data.startswith("back_order:"))
+    dp.callback_query.register(cb_contact_order, F.data.startswith("contact_order:"))
+    dp.callback_query.register(cb_complete_order, F.data.startswith("complete_order:"))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
