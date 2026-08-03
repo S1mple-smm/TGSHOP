@@ -651,6 +651,17 @@ async def api_create_order(request):
             except Exception as admin_err:
                 log.error(f"Не удалось отправить уведомление админу: {admin_err}")
 
+        if user_id > 0:
+            try:
+                await bot.send_message(
+                    user_id,
+                    f"✅ <b>Заказ №{order_id} оформлен!</b>\n\nМенеджер свяжется с вами в ближайшее время.",
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=customer_contact_kb(order_id),
+                )
+            except Exception as buyer_err:
+                log.error(f"Не удалось отправить покупателю подтверждение заказа: {buyer_err}")
+
         return web.json_response({"status": "ok", "order_id": order_id})
     except Exception as e:
         log.error(f"Ошибка сохранения заказа через сайт: {e}")
@@ -737,6 +748,14 @@ def order_actions_kb(order_id):
         [InlineKeyboardButton(text="✅ Завершить заказ", callback_data=f"complete_order:{order_id}")],
         [InlineKeyboardButton(text="◀️ Назад", callback_data=f"back_order:{order_id}")],
     ])
+
+
+def customer_contact_kb(order_id):
+    """Кнопка для ПОКУПАТЕЛЯ под его заказом — самостоятельно начать переписку с менеджером
+    (раньше написать могла только сторона админа первой; теперь и покупатель может начать)."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💬 Написать менеджеру", callback_data=f"customer_contact:{order_id}")
+    ]])
 
 
 async def cmd_start(m: Message):
@@ -879,6 +898,38 @@ async def cb_contact_order(call: CallbackQuery):
     )
 
 
+async def cb_customer_contact(call: CallbackQuery):
+    """Покупатель нажал «Написать менеджеру» под своим заказом — включаем пересылку его
+    сообщений админу. В отличие от cb_contact_order (сторона админа), здесь НЕТ и не должно
+    быть проверки _is_admin_user — эта кнопка как раз для покупателя."""
+    order_id = int(call.data.split(":")[1])
+    customer_id = call.from_user.id
+    active_relay_users.add(customer_id)
+
+    await call.answer("Готово! Напишите сообщение — менеджер его увидит.")
+    try:
+        await call.message.answer(
+            "💬 Напишите ваш вопрос следующим сообщением — оно уйдёт менеджеру, а ответ придёт сюда же."
+        )
+    except Exception as e:
+        log.error(f"Не удалось подтвердить покупателю включение переписки: {e}")
+
+    if settings.ADMIN_ID:
+        try:
+            await bot.send_message(
+                settings.ADMIN_ID,
+                f"💬 Клиент <b>{call.from_user.full_name}</b> хочет связаться по заказу №{order_id}.",
+                parse_mode=ParseMode.HTML,
+                # "Ответить" переиспользует cb_contact_order — тот же admin-only колбэк,
+                # что и кнопка "Написать клиенту" в order_actions_kb.
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="✍️ Ответить", callback_data=f"contact_order:{order_id}")
+                ]]),
+            )
+        except Exception as e:
+            log.error(f"Не удалось уведомить админа о запросе на связь: {e}")
+
+
 async def cb_complete_order(call: CallbackQuery):
     """Админ нажал «Завершить заказ» — помечаем заказ выполненным."""
     if not _is_admin_user(call.from_user.id):
@@ -906,6 +957,17 @@ async def cb_complete_order(call: CallbackQuery):
             await call.message.edit_text(msg_text, parse_mode=ParseMode.HTML, reply_markup=order_edit_kb(order_id))
         except Exception as e:
             log.error(f"Не удалось обновить сообщение о заказе: {e}")
+
+        if order.get("user_id"):
+            try:
+                await bot.send_message(
+                    order["user_id"],
+                    f"✅ <b>Ваш заказ №{order_id} выполнен!</b>\n\nСпасибо за покупку в WEISI TECH. "
+                    f"Если появятся вопросы — просто напишите нам.",
+                    parse_mode=ParseMode.HTML,
+                )
+            except Exception as e:
+                log.error(f"Не удалось уведомить клиента о завершении заказа: {e}")
 
     await call.answer("Заказ отмечен как завершённый ✅")
 
@@ -945,7 +1007,7 @@ async def process_finish(m: Message, state: FSMContext):
         f"💰 <b>К ОПЛАТЕ: {data['total']:,.0f} UZS</b>\n\n"
         "<i>Менеджер свяжется с вами в ближайшее время.</i>"
     )
-    await m.answer(receipt, reply_markup=main_kb(), parse_mode=ParseMode.HTML)
+    await m.answer(receipt, reply_markup=customer_contact_kb(order_id), parse_mode=ParseMode.HTML)
 
     if settings.ADMIN_ID:
         try:
@@ -1044,6 +1106,7 @@ async def main():
     dp.callback_query.register(cb_back_order, F.data.startswith("back_order:"))
     dp.callback_query.register(cb_contact_order, F.data.startswith("contact_order:"))
     dp.callback_query.register(cb_complete_order, F.data.startswith("complete_order:"))
+    dp.callback_query.register(cb_customer_contact, F.data.startswith("customer_contact:"))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
